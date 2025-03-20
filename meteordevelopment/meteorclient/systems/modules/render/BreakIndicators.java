@@ -41,28 +41,29 @@ import net.minecraft.class_2680;
 public class BreakIndicators extends Module {
    private final SettingGroup sgGeneral;
    private final SettingGroup sgRender;
-   private final Setting<Boolean> useDoubleminePrediction;
    private final Setting<Double> rebreakCompletionAmount;
    private final Setting<Double> completionAmount;
    private final Setting<Double> removeCompletionAmount;
    private final Setting<Boolean> ignoreFriends;
    private final Setting<Boolean> render;
+   private final Setting<Boolean> useDoubleminePrediction;
    private final Setting<ShapeMode> shapeMode;
    private final Setting<SettingColor> sideColor;
    private final Setting<SettingColor> lineColor;
    private final Queue<BreakIndicators.BlockBreak> _breakPackets;
-   private final Map<class_2338, BreakIndicators.BlockBreak> breakStartTimes;
+   public final Map<class_2338, BreakIndicators.BlockBreak> breakStartTimes;
+   private final Map<class_2338, BreakIndicators.BlockBreak> predictedDoublemine;
 
    public BreakIndicators() {
       super(Categories.Render, "break-indicators", "Renders the progress of a block being broken.");
       this.sgGeneral = this.settings.getDefaultGroup();
       this.sgRender = this.settings.createGroup("Render");
-      this.useDoubleminePrediction = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("use-doublemine-predicition")).description("Does some fancy stuff to make indicators more accurate.")).defaultValue(false)).build());
       this.rebreakCompletionAmount = this.sgGeneral.add(((DoubleSetting.Builder)((DoubleSetting.Builder)(new DoubleSetting.Builder()).name("rebreak-completion-amount")).description("Determines how fast rendering increases of a suspected rebreak block. Smaller is faster.")).defaultValue(0.7D).min(0.0D).sliderMax(1.5D).build());
       this.completionAmount = this.sgGeneral.add(((DoubleSetting.Builder)((DoubleSetting.Builder)(new DoubleSetting.Builder()).name("full-completion-amount")).description("Determines how fast rendering increases. Smaller is faster.")).defaultValue(1.0D).min(0.0D).sliderMax(1.5D).build());
       this.removeCompletionAmount = this.sgGeneral.add(((DoubleSetting.Builder)((DoubleSetting.Builder)(new DoubleSetting.Builder()).name("force-remove-completion-amount")).description("Determines how long it takes to forcibly remove a block from being rendered.")).defaultValue(1.3D).min(0.0D).sliderMax(1.5D).build());
       this.ignoreFriends = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("ignore-friends")).description("Doesn't render blocks that friends are breaking.")).defaultValue(false)).build());
       this.render = this.sgRender.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("do-render")).description("Renders the blocks in queue to be broken.")).defaultValue(true)).build());
+      this.useDoubleminePrediction = this.sgRender.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("use-doublemine-predicition")).description("Does some fancy stuff to make indicators more accurate.")).defaultValue(false)).build());
       SettingGroup var10001 = this.sgRender;
       EnumSetting.Builder var10002 = (EnumSetting.Builder)((EnumSetting.Builder)((EnumSetting.Builder)(new EnumSetting.Builder()).name("shape-mode")).description("How the shapes are rendered.")).defaultValue(ShapeMode.Both);
       Setting var10003 = this.render;
@@ -76,6 +77,7 @@ public class BreakIndicators extends Module {
       })).build());
       this._breakPackets = new ConcurrentLinkedQueue();
       this.breakStartTimes = new HashMap();
+      this.predictedDoublemine = new HashMap();
    }
 
    @EventHandler
@@ -93,25 +95,41 @@ public class BreakIndicators extends Module {
       return this.breakStartTimes.containsKey(blockPos);
    }
 
+   public boolean isBeingDoublemined(class_2338 blockPos) {
+      return this.predictedDoublemine.containsKey(blockPos);
+   }
+
+   public class_1657 getPlayerDoubleminingBlock(class_2338 blockPos) {
+      return (class_1657)((BreakIndicators.BlockBreak)this.predictedDoublemine.get(blockPos)).entity;
+   }
+
+   public double getBlockProgress(class_2338 blockPos) {
+      return !this.breakStartTimes.containsKey(blockPos) ? 0.0D : ((BreakIndicators.BlockBreak)this.breakStartTimes.get(blockPos)).getBreakProgress(RenderUtils.getCurrentGameTickCalculated());
+   }
+
    @EventHandler
    private void onRender(Render3DEvent event) {
       double currentGameTickCalculated = RenderUtils.getCurrentGameTickCalculated();
 
       while(!this._breakPackets.isEmpty()) {
          BreakIndicators.BlockBreak breakEvent = (BreakIndicators.BlockBreak)this._breakPackets.remove();
-         if ((Boolean)this.useDoubleminePrediction.get() && breakEvent.entity != null && breakEvent.entity instanceof class_1657) {
+         if (breakEvent.entity != null && breakEvent.entity instanceof class_1657) {
             List<BreakIndicators.BlockBreak> playerBreakingBlocks = this.breakStartTimes.values().stream().filter((x) -> {
                return x.entity == breakEvent.entity && !x.blockPos.equals(breakEvent.blockPos);
             }).sorted((block1, block2) -> {
                return Double.compare(block1.startTick, block2.startTick);
             }).toList();
             if (playerBreakingBlocks.size() >= 2) {
-               this.breakStartTimes.remove(((BreakIndicators.BlockBreak)playerBreakingBlocks.getLast()).blockPos);
+               this.predictedDoublemine.remove(((BreakIndicators.BlockBreak)playerBreakingBlocks.getLast()).blockPos);
             }
          }
 
          if (!this.breakStartTimes.containsKey(breakEvent.blockPos)) {
             this.breakStartTimes.put(breakEvent.blockPos, breakEvent);
+         }
+
+         if (!this.predictedDoublemine.containsKey(breakEvent.blockPos)) {
+            this.predictedDoublemine.put(breakEvent.blockPos, breakEvent);
          }
       }
 
@@ -121,51 +139,93 @@ public class BreakIndicators extends Module {
          Entry entry;
          do {
             if (!iterator.hasNext()) {
-               Iterator var11 = this.breakStartTimes.entrySet().iterator();
+               iterator = this.predictedDoublemine.entrySet().iterator();
 
                while(true) {
-                  Entry entry;
-                  class_1657 player;
                   do {
-                     if (!var11.hasNext()) {
+                     if (!iterator.hasNext()) {
+                        Entry entry;
+                        class_1657 player;
+                        class_1297 var8;
+                        Iterator var11;
                         if ((Boolean)this.useDoubleminePrediction.get()) {
-                           Map<class_1657, List<BreakIndicators.BlockBreak>> playerBreakingBlocks = (Map)this.breakStartTimes.values().stream().sorted(Comparator.comparingDouble((blockBreak) -> {
-                              return blockBreak.startTick;
-                           })).filter((blockBreak) -> {
-                              return blockBreak.entity instanceof class_1657;
-                           }).collect(Collectors.groupingBy((blockBreak) -> {
-                              return (class_1657)blockBreak.entity;
-                           }, Collectors.toList()));
-                           Iterator var13 = playerBreakingBlocks.entrySet().iterator();
+                           var11 = this.predictedDoublemine.entrySet().iterator();
 
-                           while(var13.hasNext()) {
-                              Entry<class_1657, List<BreakIndicators.BlockBreak>> entry = (Entry)var13.next();
-                              ((List)entry.getValue()).forEach((x) -> {
-                                 x.isRebreak = false;
-                              });
-                              if (((List)entry.getValue()).size() >= 2) {
-                                 ((BreakIndicators.BlockBreak)((List)entry.getValue()).getLast()).isRebreak = true;
-                              }
+                           label93:
+                           while(true) {
+                              do {
+                                 if (!var11.hasNext()) {
+                                    break label93;
+                                 }
+
+                                 entry = (Entry)var11.next();
+                                 if (!(Boolean)this.ignoreFriends.get() || ((BreakIndicators.BlockBreak)entry.getValue()).entity == null) {
+                                    break;
+                                 }
+
+                                 var8 = ((BreakIndicators.BlockBreak)entry.getValue()).entity;
+                                 if (!(var8 instanceof class_1657)) {
+                                    break;
+                                 }
+
+                                 player = (class_1657)var8;
+                              } while(Friends.get().isFriend(player));
+
+                              ((BreakIndicators.BlockBreak)entry.getValue()).renderBlock(event, currentGameTickCalculated);
+                           }
+                        } else {
+                           var11 = this.breakStartTimes.entrySet().iterator();
+
+                           label78:
+                           while(true) {
+                              do {
+                                 if (!var11.hasNext()) {
+                                    break label78;
+                                 }
+
+                                 entry = (Entry)var11.next();
+                                 if (!(Boolean)this.ignoreFriends.get() || ((BreakIndicators.BlockBreak)entry.getValue()).entity == null) {
+                                    break;
+                                 }
+
+                                 var8 = ((BreakIndicators.BlockBreak)entry.getValue()).entity;
+                                 if (!(var8 instanceof class_1657)) {
+                                    break;
+                                 }
+
+                                 player = (class_1657)var8;
+                              } while(Friends.get().isFriend(player));
+
+                              ((BreakIndicators.BlockBreak)entry.getValue()).renderBlock(event, currentGameTickCalculated);
+                           }
+                        }
+
+                        Map<class_1657, List<BreakIndicators.BlockBreak>> doublemineBreakingBlocks = (Map)this.predictedDoublemine.values().stream().sorted(Comparator.comparingDouble((blockBreak) -> {
+                           return blockBreak.startTick;
+                        })).filter((blockBreak) -> {
+                           return blockBreak.entity instanceof class_1657;
+                        }).collect(Collectors.groupingBy((blockBreak) -> {
+                           return (class_1657)blockBreak.entity;
+                        }, Collectors.toList()));
+                        Iterator var13 = doublemineBreakingBlocks.entrySet().iterator();
+
+                        while(var13.hasNext()) {
+                           Entry<class_1657, List<BreakIndicators.BlockBreak>> entry = (Entry)var13.next();
+                           ((List)entry.getValue()).forEach((x) -> {
+                              x.isRebreak = false;
+                           });
+                           if (((List)entry.getValue()).size() >= 2) {
+                              ((BreakIndicators.BlockBreak)((List)entry.getValue()).getLast()).isRebreak = true;
                            }
                         }
 
                         return;
                      }
 
-                     entry = (Entry)var11.next();
-                     if (!(Boolean)this.ignoreFriends.get() || ((BreakIndicators.BlockBreak)entry.getValue()).entity == null) {
-                        break;
-                     }
+                     entry = (Entry)iterator.next();
+                  } while(!this.mc.field_1687.method_8320((class_2338)entry.getKey()).method_26215() && !(((BreakIndicators.BlockBreak)entry.getValue()).getBreakProgress(currentGameTickCalculated) > (Double)this.removeCompletionAmount.get()) && BlockUtils.canBreak((class_2338)entry.getKey()));
 
-                     class_1297 var8 = ((BreakIndicators.BlockBreak)entry.getValue()).entity;
-                     if (!(var8 instanceof class_1657)) {
-                        break;
-                     }
-
-                     player = (class_1657)var8;
-                  } while(Friends.get().isFriend(player));
-
-                  ((BreakIndicators.BlockBreak)entry.getValue()).renderBlock(event, currentGameTickCalculated);
+                  iterator.remove();
                }
             }
 
@@ -176,7 +236,7 @@ public class BreakIndicators extends Module {
       }
    }
 
-   private class BlockBreak {
+   public class BlockBreak {
       public class_2338 blockPos;
       public double startTick;
       public class_1297 entity;
@@ -212,7 +272,7 @@ public class BreakIndicators extends Module {
          }
       }
 
-      private double getBreakProgress(double currentTick) {
+      public double getBreakProgress(double currentTick) {
          class_2680 state = BreakIndicators.this.mc.field_1687.method_8320(this.blockPos);
          FindItemResult slot = InvUtils.findFastestToolHotbar(BreakIndicators.this.mc.field_1687.method_8320(this.blockPos));
          double breakingSpeed = BlockUtils.getBlockBreakingSpeed(slot.found() ? slot.slot() : BreakIndicators.this.mc.field_1724.method_31548().field_7545, state, true);

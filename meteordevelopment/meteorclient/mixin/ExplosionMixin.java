@@ -2,22 +2,16 @@ package meteordevelopment.meteorclient.mixin;
 
 import meteordevelopment.meteorclient.MeteorClient;
 import meteordevelopment.meteorclient.mixininterface.IExplosion;
-import meteordevelopment.meteorclient.systems.modules.Modules;
-import meteordevelopment.meteorclient.systems.modules.misc.SoundBlocker;
 import net.minecraft.class_1297;
 import net.minecraft.class_1927;
 import net.minecraft.class_1937;
 import net.minecraft.class_243;
-import net.minecraft.class_3414;
-import net.minecraft.class_3419;
 import net.minecraft.class_1927.class_4179;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin({class_1927.class})
 public abstract class ExplosionMixin implements IExplosion {
@@ -64,22 +58,5 @@ public abstract class ExplosionMixin implements IExplosion {
       this.field_9190 = power;
       this.field_9186 = createFire;
       this.field_9184 = class_4179.field_18687;
-   }
-
-   @Redirect(
-      method = {"affectWorld"},
-      at = @At(
-   value = "INVOKE",
-   target = "Lnet/minecraft/world/World;playSound(DDDLnet/minecraft/sound/SoundEvent;Lnet/minecraft/sound/SoundCategory;FFZ)V"
-)
-   )
-   private void redirect(class_1937 instance, double x, double y, double z, class_3414 sound, class_3419 category, float volume, float pitch, boolean useDistance) {
-      SoundBlocker blocker = (SoundBlocker)Modules.get().get(SoundBlocker.class);
-      if (blocker.isActive()) {
-         instance.method_8486(x, y, z, sound, category, (float)((double)volume * blocker.getCrystalVolume()), pitch, useDistance);
-      } else {
-         instance.method_8486(x, y, z, sound, category, volume, pitch, useDistance);
-      }
-
    }
 }

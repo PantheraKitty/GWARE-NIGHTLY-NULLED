@@ -308,10 +308,10 @@ public class BetterChat extends Module {
       }
    }
 
-   public void removeLine(int index) {
+   public synchronized void removeLine(int index) {
       if (index >= this.lines.size()) {
          if ((Boolean)this.antiSpam.get()) {
-            this.error("Issue detected with the anti-spam system! Likely a compatibility issue with another mod. Disabling anti-spam to protect chat integrity.", new Object[0]);
+            this.error("Issue detected with the anti-spam system! Likely a compatibility issue with another mod.", new Object[0]);
             this.antiSpam.set(false);
          }
 

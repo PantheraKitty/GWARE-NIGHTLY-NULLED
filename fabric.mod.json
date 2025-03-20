@@ -1,13 +1,11 @@
 {
   "schemaVersion": 1,
-  "name": "Meteor Client GonbleWare Fork",
+  "name": "Gware Nightly",
   "id": "meteor-client",
-  "version": "0.0.8",
+  "version": "1.4.1",
   "description": "Based utility mod.",
   "authors": [
-    "MineGame159",
-    "squidoodly",
-    "seasnail",
+    "Rare",
     "gonbler"
   ],
   "contact": {

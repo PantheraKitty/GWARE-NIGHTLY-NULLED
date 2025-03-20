@@ -30,6 +30,7 @@ import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import meteordevelopment.meteorclient.utils.world.Dimension;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.class_1657;
+import net.minecraft.class_1799;
 import net.minecraft.class_238;
 import net.minecraft.class_243;
 import net.minecraft.class_3417;
@@ -44,6 +45,7 @@ public class LogoutSpots extends Module {
    private final Setting<Boolean> notifyOnRejoinShowCoords;
    private final Setting<Boolean> notifyOnRejoinLimitDistance;
    private final Setting<Double> notifyOnRejoinDistance;
+   private final Setting<Boolean> showTime;
    private final Setting<ShapeMode> shapeMode;
    private final Setting<SettingColor> sideColor;
    private final Setting<SettingColor> lineColor;
@@ -52,7 +54,7 @@ public class LogoutSpots extends Module {
    private final Setting<SettingColor> totemPopsColor;
    private final Setting<SettingColor> textBackgroundColor;
    private final Setting<Double> nametageScale;
-   private final Map<UUID, LogoutSpots.GhostPlayer> loggedPlayers;
+   private static final Map<UUID, LogoutSpots.GhostPlayer> loggedPlayers = new ConcurrentHashMap();
    private final Map<UUID, class_1657> playerCache;
    private final Map<UUID, Integer> ticksOnPlayerList;
    private Dimension lastDimension;
@@ -71,6 +73,7 @@ public class LogoutSpots extends Module {
       this.notifyOnRejoinDistance = this.sgGeneral.add(((DoubleSetting.Builder)((DoubleSetting.Builder)((DoubleSetting.Builder)(new DoubleSetting.Builder()).name("notify-on-rejoin-distance")).description("The limit to show coords on rejoin.")).defaultValue(5000.0D).min(0.0D).visible(() -> {
          return (Boolean)this.notifyOnRejoin.get() && (Boolean)this.notifyOnRejoinShowCoords.get() && (Boolean)this.notifyOnRejoinLimitDistance.get();
       })).build());
+      this.showTime = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("show-time")).description("Whether or not to show the time since logged out.")).defaultValue(true)).build());
       this.shapeMode = this.sgRender.add(((EnumSetting.Builder)((EnumSetting.Builder)((EnumSetting.Builder)(new EnumSetting.Builder()).name("shape-mode")).description("How the shapes are rendered.")).defaultValue(ShapeMode.Both)).build());
       this.sideColor = this.sgRender.add(((ColorSetting.Builder)((ColorSetting.Builder)(new ColorSetting.Builder()).name("side-color")).description("The side color.")).defaultValue(new SettingColor(255, 0, 255, 55)).build());
       this.lineColor = this.sgRender.add(((ColorSetting.Builder)((ColorSetting.Builder)(new ColorSetting.Builder()).name("line-color")).description("The line color.")).defaultValue(new SettingColor(255, 0, 255)).build());
@@ -79,7 +82,6 @@ public class LogoutSpots extends Module {
       this.totemPopsColor = this.sgRender.add(((ColorSetting.Builder)((ColorSetting.Builder)(new ColorSetting.Builder()).name("totem-pop-color")).description("The color of the totem pops.")).defaultValue(new SettingColor(225, 120, 20)).build());
       this.textBackgroundColor = this.sgRender.add(((ColorSetting.Builder)((ColorSetting.Builder)(new ColorSetting.Builder()).name("text-background-color")).description("The text background color.")).defaultValue(new SettingColor(0, 0, 0, 75)).build());
       this.nametageScale = this.sgRender.add(((DoubleSetting.Builder)((DoubleSetting.Builder)(new DoubleSetting.Builder()).name("text-scale")).description("The scale for text.")).defaultValue(1.0D).min(0.1D).sliderMax(2.0D).build());
-      this.loggedPlayers = new ConcurrentHashMap();
       this.playerCache = new ConcurrentHashMap();
       this.ticksOnPlayerList = new ConcurrentHashMap();
       this.lineColor.onChanged();
@@ -89,13 +91,19 @@ public class LogoutSpots extends Module {
       this.lastDimension = PlayerUtils.getDimension();
    }
 
+   public void onDeactivate() {
+      loggedPlayers.clear();
+      this.playerCache.clear();
+      this.ticksOnPlayerList.clear();
+   }
+
    @EventHandler(
       priority = -200
    )
    private void onTick(TickEvent.Post event) {
       Dimension dimension = PlayerUtils.getDimension();
       if (dimension != this.lastDimension) {
-         this.loggedPlayers.clear();
+         loggedPlayers.clear();
       }
 
       this.lastDimension = dimension;
@@ -108,7 +116,7 @@ public class LogoutSpots extends Module {
          }
       }
 
-      this.loggedPlayers.entrySet().removeIf((entry) -> {
+      loggedPlayers.entrySet().removeIf((entry) -> {
          if (this.mc.method_1562().method_2871((UUID)entry.getKey()) != null) {
             int n = 0;
             if (this.ticksOnPlayerList.containsKey(entry.getKey())) {
@@ -128,8 +136,8 @@ public class LogoutSpots extends Module {
    @EventHandler
    private void onPlayerJoin(PlayerJoinLeaveEvent.Join event) {
       if (event.getEntry().comp_1106() != null) {
-         if (this.loggedPlayers.containsKey(event.getEntry().comp_1106())) {
-            LogoutSpots.GhostPlayer ghost = (LogoutSpots.GhostPlayer)this.loggedPlayers.remove(event.getEntry().comp_1106());
+         if (loggedPlayers.containsKey(event.getEntry().comp_1106())) {
+            LogoutSpots.GhostPlayer ghost = (LogoutSpots.GhostPlayer)loggedPlayers.remove(event.getEntry().comp_1106());
             if ((Boolean)this.notifyOnRejoin.get()) {
                boolean showCoords = (Boolean)this.notifyOnRejoinShowCoords.get();
                if ((Boolean)this.notifyOnRejoinLimitDistance.get() && (Double)this.notifyOnRejoinDistance.get() < ghost.pos.method_1022(class_243.field_1353)) {
@@ -149,18 +157,22 @@ public class LogoutSpots extends Module {
       }
    }
 
+   public static Map<UUID, LogoutSpots.GhostPlayer> getLoggedPlayers() {
+      return loggedPlayers;
+   }
+
    @EventHandler
    private void onPlayerLeave(PlayerJoinLeaveEvent.Leave event) {
       if (event.getEntry().method_2966() != null) {
          UUID leaveId = event.getEntry().method_2966().getId();
-         if (!this.loggedPlayers.containsKey(leaveId)) {
+         if (!loggedPlayers.containsKey(leaveId)) {
             if (this.playerCache.containsKey(leaveId)) {
                class_1657 player = (class_1657)this.playerCache.get(leaveId);
                if (player == null) {
                   this.warning("player with id " + leaveId.toString() + " was null for some reason :(, couldn't save logout spot", new Object[0]);
                } else if (!(player instanceof FakePlayerEntity)) {
                   LogoutSpots.GhostPlayer ghost = new LogoutSpots.GhostPlayer(player);
-                  this.loggedPlayers.put(event.getEntry().method_2966().getId(), ghost);
+                  loggedPlayers.put(event.getEntry().method_2966().getId(), ghost);
                }
             }
          }
@@ -169,30 +181,31 @@ public class LogoutSpots extends Module {
 
    @EventHandler
    private void onRender3D(Render3DEvent event) {
-      this.loggedPlayers.values().forEach((player) -> {
+      loggedPlayers.values().forEach((player) -> {
          player.render3D(event);
       });
    }
 
    @EventHandler
    private void onRender2D(Render2DEvent event) {
-      this.loggedPlayers.values().forEach((player) -> {
+      loggedPlayers.values().forEach((player) -> {
          player.render2D(event);
       });
    }
 
    public String getInfoString() {
-      return Integer.toString(this.loggedPlayers.size());
+      return Integer.toString(loggedPlayers.size());
    }
 
-   private class GhostPlayer {
+   public class GhostPlayer {
       private final UUID uuid;
       private long logoutTime;
-      private String name;
-      private class_238 hitbox;
-      private class_1657 playerEntity;
+      public String name;
+      public class_238 hitbox;
+      public class_1657 playerEntity;
       private List<WireframeEntityRenderer.RenderablePart> parts;
-      private class_243 pos;
+      public class_243 pos;
+      private class_1799 heldItem;
 
       public GhostPlayer(class_1657 player) {
          this.playerEntity = player;
@@ -201,6 +214,7 @@ public class LogoutSpots extends Module {
          this.hitbox = player.method_5829();
          this.pos = player.method_19538();
          this.logoutTime = System.currentTimeMillis();
+         this.heldItem = player.method_6047();
       }
 
       public void render3D(Render3DEvent event) {
@@ -210,6 +224,10 @@ public class LogoutSpots extends Module {
 
          if (this.parts != null) {
             WireframeEntityRenderer.render(event, this.pos, this.parts, 1.0D, (Color)LogoutSpots.this.sideColor.get(), (Color)LogoutSpots.this.lineColor.get(), (ShapeMode)LogoutSpots.this.shapeMode.get());
+            if (!this.heldItem.method_7960()) {
+               WireframeEntityRenderer.renderHeldItem(event, this.playerEntity, event.renderer);
+            }
+
          }
       }
 
@@ -220,7 +238,7 @@ public class LogoutSpots extends Module {
             Vector3d nametagPos = new Vector3d((this.hitbox.field_1323 + this.hitbox.field_1320) / 2.0D, this.hitbox.field_1325 + 0.5D, (this.hitbox.field_1321 + this.hitbox.field_1324) / 2.0D);
             if (NametagUtils.to2D(nametagPos, scale)) {
                NametagUtils.begin(nametagPos);
-               String timeText = " " + this.getTimeText();
+               String timeText = (Boolean)LogoutSpots.this.showTime.get() ? " " + this.getTimeText() : "";
                String totemPopsText = " " + -MeteorClient.INFO.getPops(this.uuid);
                double i = text.getWidth(this.name) / 2.0D + text.getWidth(timeText) / 2.0D + text.getWidth(totemPopsText) / 2.0D;
                Renderer2D.COLOR.begin();

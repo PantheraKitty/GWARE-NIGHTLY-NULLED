@@ -3,6 +3,8 @@ package meteordevelopment.meteorclient.systems.modules.combat;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
+import java.util.Map.Entry;
 import meteordevelopment.meteorclient.MeteorClient;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
@@ -15,11 +17,15 @@ import meteordevelopment.meteorclient.settings.EnumSetting;
 import meteordevelopment.meteorclient.settings.IntSetting;
 import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
+import meteordevelopment.meteorclient.systems.friends.Friends;
 import meteordevelopment.meteorclient.systems.modules.Categories;
 import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.systems.modules.Modules;
+import meteordevelopment.meteorclient.systems.modules.render.LogoutSpots;
 import meteordevelopment.meteorclient.utils.entity.EntityUtils;
 import meteordevelopment.meteorclient.utils.entity.SortPriority;
 import meteordevelopment.meteorclient.utils.entity.TargetUtils;
+import meteordevelopment.meteorclient.utils.entity.fakeplayer.FakePlayerEntity;
 import meteordevelopment.meteorclient.utils.player.FindItemResult;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
 import meteordevelopment.meteorclient.utils.render.color.Color;
@@ -35,7 +41,6 @@ import net.minecraft.class_2338;
 import net.minecraft.class_2350;
 import net.minecraft.class_238;
 import net.minecraft.class_243;
-import net.minecraft.class_3726;
 import net.minecraft.class_3959;
 import net.minecraft.class_3965;
 import net.minecraft.class_2350.class_2353;
@@ -55,6 +60,7 @@ public class AutoTrap extends Module {
    private final Setting<Boolean> pauseEat;
    private final Setting<Boolean> prediction;
    private final Setting<Double> predictionSeconds;
+   private final Setting<Boolean> targetLogoutSpots;
    private final Setting<Boolean> render;
    private final Setting<ShapeMode> shapeMode;
    private final Setting<SettingColor> sideColor;
@@ -72,6 +78,7 @@ public class AutoTrap extends Module {
       this.pauseEat = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("pause-eat")).description("Pauses while eating.")).defaultValue(true)).build());
       this.prediction = this.sgPrediction.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("predicition")).description("Places blocks where the player will be in the future.")).defaultValue(true)).build());
       this.predictionSeconds = this.sgPrediction.add(((DoubleSetting.Builder)((DoubleSetting.Builder)(new DoubleSetting.Builder()).name("prediction-amount")).description("The number of seconds to calculate movement into the future. Should be around 1.5x your ping.")).defaultValue(0.1D).min(0.0D).sliderMax(0.4D).build());
+      this.targetLogoutSpots = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("target-logout-spots")).description("Targets logout spots that aren't friends.")).defaultValue(true)).build());
       this.render = this.sgRender.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("render")).description("Renders an overlay where blocks will be placed.")).defaultValue(true)).build());
       this.shapeMode = this.sgRender.add(((EnumSetting.Builder)((EnumSetting.Builder)((EnumSetting.Builder)(new EnumSetting.Builder()).name("shape-mode")).description("How the shapes are rendered.")).defaultValue(ShapeMode.Both)).build());
       this.sideColor = this.sgRender.add(((ColorSetting.Builder)((ColorSetting.Builder)(new ColorSetting.Builder()).name("side-color")).description("The side color of the target block rendering.")).defaultValue(new SettingColor(197, 137, 232, 10)).build());
@@ -87,32 +94,40 @@ public class AutoTrap extends Module {
       if (this.target == null || TargetUtils.isBadTarget(this.target, (double)(Integer)this.range.get())) {
          this.target = TargetUtils.getPlayerTarget((double)(Integer)this.range.get(), (SortPriority)this.priority.get());
          if (TargetUtils.isBadTarget(this.target, (double)(Integer)this.range.get())) {
-            return;
-         }
-      }
+            if ((Boolean)this.targetLogoutSpots.get()) {
+               this.target = this.getLogoutSpotTarget();
+            }
 
-      if (this.target != null) {
-         if (!(Boolean)this.pauseEat.get() || !this.mc.field_1724.method_6115()) {
-            class_1792 useItem = this.findUseItem();
-            if (useItem != null) {
-               List<class_2338> placePoses = this.getBlockPoses();
-               class_243 predictedPoint = this.target.method_33571();
-               if ((Boolean)this.prediction.get()) {
-                  predictedPoint = this.predictPosition(this.target);
-               }
-
-               placePoses.sort((x, y) -> {
-                  return Double.compare(x.method_19770(predictedPoint), y.method_19770(predictedPoint));
-               });
-               if (MeteorClient.BLOCK.beginPlacement(placePoses, useItem)) {
-                  placePoses.forEach((blockPos) -> {
-                     MeteorClient.BLOCK.placeBlock(class_1802.field_8281, blockPos);
-                  });
-                  MeteorClient.BLOCK.endPlacement();
-               }
+            if (this.target == null) {
+               return;
             }
          }
       }
+
+      if (!(Boolean)this.pauseEat.get() || !this.mc.field_1724.method_6115()) {
+         class_1792 useItem = this.findUseItem();
+         if (useItem != null) {
+            List<class_2338> placePoses = this.getBlockPoses();
+            class_243 predictedPoint = this.target.method_33571();
+            if ((Boolean)this.prediction.get()) {
+               predictedPoint = this.predictPosition(this.target);
+            }
+
+            placePoses.sort((x, y) -> {
+               return Double.compare(x.method_19770(predictedPoint), y.method_19770(predictedPoint));
+            });
+            if (MeteorClient.BLOCK.beginPlacement(placePoses, useItem)) {
+               placePoses.forEach((blockPos) -> {
+                  MeteorClient.BLOCK.placeBlock(class_1802.field_8281, blockPos);
+               });
+               MeteorClient.BLOCK.endPlacement();
+            }
+         }
+      }
+   }
+
+   public boolean isFriend(class_1657 player) {
+      return Friends.get().isFriend(player);
    }
 
    private class_1792 findUseItem() {
@@ -135,77 +150,53 @@ public class AutoTrap extends Module {
 
    private List<class_2338> getBlockPoses() {
       List<class_2338> placePoses = new ArrayList();
-      class_238 boundingBox = this.target.method_5829().method_1002(0.05D, 0.1D, 0.05D);
-      double feetY = this.target.method_23318();
-      class_238 feetBox = new class_238(boundingBox.field_1323, feetY, boundingBox.field_1321, boundingBox.field_1320, feetY + 0.1D, boundingBox.field_1324);
-      Iterator var6;
-      class_2338 pos;
-      int y;
-      if (this.target.method_20448()) {
-         var6 = class_2338.method_10094((int)Math.floor(feetBox.field_1323), (int)Math.floor(feetBox.field_1322), (int)Math.floor(feetBox.field_1321), (int)Math.floor(feetBox.field_1320), (int)Math.floor(feetBox.field_1325), (int)Math.floor(feetBox.field_1324)).iterator();
+      if (this.target == null) {
+         return placePoses;
+      } else {
+         class_243 targetPos = this.target.method_19538();
+         class_2338 targetBlockPos = class_2338.method_49638(targetPos);
+         new class_238((double)targetBlockPos.method_10263() - 0.3D, (double)targetBlockPos.method_10264(), (double)targetBlockPos.method_10260() - 0.3D, (double)targetBlockPos.method_10263() + 0.3D, (double)targetBlockPos.method_10264() + 1.8D, (double)targetBlockPos.method_10260() + 0.3D);
 
-         while(var6.hasNext()) {
-            pos = (class_2338)var6.next();
+         for(int y = -1; y < 3; ++y) {
+            if (y != 0) {
+               Iterator var6 = class_2353.field_11062.iterator();
 
-            for(y = -1; y <= 1; ++y) {
-               for(int offsetZ = -1; offsetZ <= 1; ++offsetZ) {
-                  if (Math.abs(y) + Math.abs(offsetZ) == 1) {
-                     class_2338 adjacentPos = pos.method_10069(y, 0, offsetZ);
-                     if (this.mc.field_1687.method_8320(adjacentPos).method_26215()) {
-                        Iterator var11 = class_2353.field_11062.iterator();
-
-                        while(var11.hasNext()) {
-                           class_2350 dir = (class_2350)var11.next();
-                           class_2338 actualPos = adjacentPos.method_10093(dir);
-                           boolean isGoodCrystalPos = false;
-                           Iterator var15 = class_2353.field_11062.iterator();
-
-                           while(var15.hasNext()) {
-                              class_2350 dir2 = (class_2350)var15.next();
-                              class_2338 playerAdjacent = this.target.method_24515().method_10093(dir2);
-                              if (playerAdjacent.equals(actualPos)) {
-                                 isGoodCrystalPos = true;
-                                 break;
-                              }
-                           }
-
-                           if (!isGoodCrystalPos && !actualPos.equals(pos) && !placePoses.contains(actualPos)) {
-                              placePoses.add(actualPos);
-                           }
-                        }
-                     }
+               while(var6.hasNext()) {
+                  class_2350 dir = (class_2350)var6.next();
+                  class_2338 pos = targetBlockPos.method_10069(0, y, 0).method_10093(dir);
+                  if (!placePoses.contains(pos)) {
+                     placePoses.add(pos);
                   }
+               }
+
+               class_2338 pos = targetBlockPos.method_10069(0, y, 0);
+               if (!placePoses.contains(pos)) {
+                  placePoses.add(pos);
                }
             }
-
-            placePoses.add(pos.method_10084());
-            placePoses.add(pos.method_10074());
          }
-      } else {
-         var6 = class_2338.method_10094((int)Math.floor(feetBox.field_1323), (int)Math.floor(feetBox.field_1322), (int)Math.floor(feetBox.field_1321), (int)Math.floor(feetBox.field_1320), (int)Math.floor(feetBox.field_1325), (int)Math.floor(feetBox.field_1324)).iterator();
 
-         while(var6.hasNext()) {
-            pos = (class_2338)var6.next();
+         return placePoses;
+      }
+   }
 
-            for(y = -1; y < 3; ++y) {
-               if (pos.method_10264() + y != this.target.method_31478()) {
-                  if (y < 2) {
-                     Iterator var18 = class_2353.field_11062.iterator();
+   private class_1657 getLogoutSpotTarget() {
+      LogoutSpots logoutSpots = (LogoutSpots)Modules.get().get(LogoutSpots.class);
+      if (logoutSpots != null) {
+         Iterator var2 = LogoutSpots.getLoggedPlayers().entrySet().iterator();
 
-                     while(var18.hasNext()) {
-                        class_2350 dir = (class_2350)var18.next();
-                        class_2338 actualPos = pos.method_10069(0, y, 0).method_10093(dir);
-                        placePoses.add(actualPos);
-                     }
-                  }
-
-                  placePoses.add(pos.method_10069(0, y, 0));
-               }
+         while(var2.hasNext()) {
+            Entry<UUID, LogoutSpots.GhostPlayer> entry = (Entry)var2.next();
+            LogoutSpots.GhostPlayer ghost = (LogoutSpots.GhostPlayer)entry.getValue();
+            if (!this.isFriend(ghost.playerEntity) && ghost.pos.method_1022(this.mc.field_1724.method_19538()) <= (double)(Integer)this.range.get()) {
+               FakePlayerEntity fakePlayer = new FakePlayerEntity(this.mc.field_1724, ghost.name, 20.0F, false);
+               fakePlayer.method_5814(ghost.pos.field_1352, ghost.pos.field_1351, ghost.pos.field_1350);
+               return fakePlayer;
             }
          }
       }
 
-      return placePoses;
+      return null;
    }
 
    @EventHandler
@@ -226,22 +217,27 @@ public class AutoTrap extends Module {
 
             while(var5.hasNext()) {
                class_2338 pos = (class_2338)var5.next();
-               boolean isCrystalBlock = false;
-               Iterator var8 = class_2353.field_11062.iterator();
-
-               while(var8.hasNext()) {
-                  class_2350 dir = (class_2350)var8.next();
-                  if (pos.equals(this.target.method_24515().method_10093(dir))) {
-                     isCrystalBlock = true;
-                  }
-               }
-
-               if (!isCrystalBlock && BlockUtils.canPlace(pos, true)) {
+               if (BlockUtils.canPlace(pos, true)) {
                   event.renderer.box((class_2338)pos, (Color)this.sideColor.get(), (Color)this.lineColor.get(), (ShapeMode)this.shapeMode.get(), 0);
                }
             }
-
          }
+
+         if ((Boolean)this.targetLogoutSpots.get()) {
+            LogoutSpots logoutSpots = (LogoutSpots)Modules.get().get(LogoutSpots.class);
+            if (logoutSpots != null) {
+               Iterator var8 = LogoutSpots.getLoggedPlayers().entrySet().iterator();
+
+               while(var8.hasNext()) {
+                  Entry<UUID, LogoutSpots.GhostPlayer> entry = (Entry)var8.next();
+                  LogoutSpots.GhostPlayer ghost = (LogoutSpots.GhostPlayer)entry.getValue();
+                  if (!this.isFriend(ghost.playerEntity)) {
+                     event.renderer.box((class_238)ghost.hitbox, (Color)this.sideColor.get(), (Color)this.lineColor.get(), (ShapeMode)this.shapeMode.get(), 0);
+                  }
+               }
+            }
+         }
+
       }
    }
 
@@ -276,10 +272,14 @@ public class AutoTrap extends Module {
    }
 
    private double getGroundLevel(class_243 position) {
-      class_243 rayStart = new class_243(position.field_1352, position.field_1351, position.field_1350);
-      class_243 rayEnd = new class_243(position.field_1352, position.field_1351 - 256.0D, position.field_1350);
-      class_3965 hitResult = this.mc.field_1687.method_17742(new class_3959(rayStart, rayEnd, class_3960.field_17559, class_242.field_1348, (class_3726)null));
-      return hitResult.method_17783() == class_240.field_1332 ? hitResult.method_17784().field_1351 : 0.0D;
+      if (this.mc.field_1687 == null) {
+         return 0.0D;
+      } else {
+         class_243 rayStart = new class_243(position.field_1352, position.field_1351, position.field_1350);
+         class_243 rayEnd = new class_243(position.field_1352, position.field_1351 - 256.0D, position.field_1350);
+         class_3965 hitResult = this.mc.field_1687.method_17742(new class_3959(rayStart, rayEnd, class_3960.field_17559, class_242.field_1348, this.mc.field_1724));
+         return hitResult != null && hitResult.method_17783() == class_240.field_1332 ? hitResult.method_17784().field_1351 : 0.0D;
+      }
    }
 
    public static enum BottomMode {

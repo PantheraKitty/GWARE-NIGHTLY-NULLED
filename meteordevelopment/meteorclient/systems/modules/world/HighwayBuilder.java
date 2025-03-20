@@ -1155,7 +1155,7 @@ public class HighwayBuilder extends Module {
          Iterator var7 = it.iterator();
 
          while(true) {
-            label42: {
+            label45: {
                if (var7.hasNext()) {
                   MBlockPos pos = (MBlockPos)var7.next();
                   if (b.count >= (Integer)b.placementsPerTick.get()) {
@@ -1167,7 +1167,7 @@ public class HighwayBuilder extends Module {
                   }
 
                   if (!BlockUtils.place(pos.getBlockPos(), class_1268.field_5808, slot, ((HighwayBuilder.Rotation)b.rotation.get()).place, 0, true, true, true)) {
-                     break label42;
+                     break label45;
                   }
 
                   placed = true;
@@ -1175,7 +1175,7 @@ public class HighwayBuilder extends Module {
                   b.placeTimer = (Integer)b.placeDelay.get();
                   ++b.count;
                   if ((Integer)b.placementsPerTick.get() != 1) {
-                     break label42;
+                     break label45;
                   }
                }
 
@@ -1519,8 +1519,8 @@ public class HighwayBuilder extends Module {
             final HighwayBuilder.DiagonalBlockPosProvider this$1;
 
             {
-               this.this$1 = this$1;
                this.val$mineAll = var2;
+               this.this$1 = this$1;
             }
 
             public boolean hasNext() {
@@ -1578,8 +1578,8 @@ public class HighwayBuilder extends Module {
             final HighwayBuilder.DiagonalBlockPosProvider this$1;
 
             {
-               this.this$1 = this$1;
                this.val$m = var2;
+               this.this$1 = this$1;
             }
 
             private int getWidth() {
@@ -1657,8 +1657,8 @@ public class HighwayBuilder extends Module {
             final HighwayBuilder.DiagonalBlockPosProvider this$1;
 
             {
-               this.this$1 = this$1;
                this.val$mine = var2;
+               this.this$1 = this$1;
                this.i = this.val$mine ? -1 : 0;
             }
 
@@ -1807,8 +1807,8 @@ public class HighwayBuilder extends Module {
             final HighwayBuilder.StraightBlockPosProvider this$1;
 
             {
-               this.this$1 = this$1;
                this.val$mineAll = var2;
+               this.this$1 = this$1;
             }
 
             public boolean hasNext() {
@@ -1902,8 +1902,8 @@ public class HighwayBuilder extends Module {
             final HighwayBuilder.StraightBlockPosProvider this$1;
 
             {
-               this.this$1 = this$1;
                this.val$mine = var2;
+               this.this$1 = this$1;
                this.i = this.val$mine ? -1 : 0;
             }
 

@@ -18,7 +18,9 @@ import net.minecraft.class_1297;
 import net.minecraft.class_1306;
 import net.minecraft.class_1309;
 import net.minecraft.class_1511;
+import net.minecraft.class_1657;
 import net.minecraft.class_1690;
+import net.minecraft.class_1799;
 import net.minecraft.class_238;
 import net.minecraft.class_243;
 import net.minecraft.class_3532;
@@ -875,6 +877,33 @@ public class WireframeEntityRenderer {
          }
       }
 
+   }
+
+   public static void renderHeldItem(Render3DEvent event, class_1309 entity, Renderer3D renderer) {
+      if (entity instanceof class_1657) {
+         class_1657 player = (class_1657)entity;
+         class_1268 hand = player.method_6068() == class_1306.field_6183 ? class_1268.field_5808 : class_1268.field_5810;
+         class_1799 stack = player.method_5998(hand);
+         if (!stack.method_7960()) {
+            matrices.method_22903();
+            matrices.method_22904(0.0D, -1.501D, 0.0D);
+            float bodyYaw = class_3532.method_17821(event.tickDelta, entity.field_6220, entity.field_6283);
+            float headYaw = class_3532.method_17821(event.tickDelta, entity.field_6259, entity.field_6241);
+            float pitch = class_3532.method_16439(event.tickDelta, entity.field_6004, entity.method_36455());
+            matrices.method_22907(class_7833.field_40716.rotationDegrees(headYaw - bodyYaw));
+            matrices.method_22907(class_7833.field_40714.rotationDegrees(pitch));
+            if (hand == class_1268.field_5808) {
+               matrices.method_22904(0.4D, 0.2D, -0.4D);
+            } else {
+               matrices.method_22904(-0.4D, 0.2D, -0.4D);
+            }
+
+            matrices.method_22905(0.5F, 0.5F, 0.5F);
+            class_238 box = new class_238(-0.5D, -0.5D, -0.5D, 0.5D, 0.5D, 0.5D);
+            renderer.box(box.field_1323, box.field_1322, box.field_1321, box.field_1320, box.field_1325, box.field_1324, sideColor, lineColor, shapeMode, 0);
+            matrices.method_22909();
+         }
+      }
    }
 
    public static class RenderablePart {

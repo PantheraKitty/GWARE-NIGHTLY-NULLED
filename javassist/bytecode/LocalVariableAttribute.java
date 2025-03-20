@@ -116,12 +116,10 @@ public class LocalVariableAttribute extends AttributeInfo {
          int pos = i * 10 + 2;
          int pc = ByteArray.readU16bit(this.info, pos);
          int len = ByteArray.readU16bit(this.info, pos + 2);
-         if (pc <= where && (!exclusive || pc != where || pc == 0)) {
-            if (pc + len > where || exclusive && pc + len == where) {
-               ByteArray.write16bit(len + gapLength, this.info, pos + 2);
-            }
-         } else {
+         if (pc > where || exclusive && pc == where && pc != 0) {
             ByteArray.write16bit(pc + gapLength, this.info, pos);
+         } else if (pc + len > where || exclusive && pc + len == where) {
+            ByteArray.write16bit(len + gapLength, this.info, pos + 2);
          }
       }
 

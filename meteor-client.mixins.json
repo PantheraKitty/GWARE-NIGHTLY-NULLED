@@ -160,7 +160,6 @@
     "ShulkerBoxBlockMixin",
     "SignBlockEntityRendererMixin",
     "SimpleEntityLookupAccessor",
-    "SimpleOptionMixin",
     "SlimeBlockMixin",
     "SlotMixin",
     "SoundSystemMixin",
@@ -191,5 +190,5 @@
   "injectors": {
     "defaultRequire": 1
   },
-  "refmap": "gonbleware-meteor-fork-refmap.json"
+  "refmap": "gonbleware-nightly-refmap.json"
 }

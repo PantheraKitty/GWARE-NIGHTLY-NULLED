@@ -152,7 +152,7 @@ public class Surround extends Module {
                };
                class_1297 blocking = (class_1297)this.mc.field_1687.method_8333((class_1297)null, box, entityPredicate).stream().findFirst().orElse((Object)null);
                if (blocking != null && System.currentTimeMillis() - this.lastAttackTime >= 50L) {
-                  MeteorClient.ROTATION.requestRotation(blocking.method_19538(), 11.0D);
+                  MeteorClient.ROTATION.requestRotation(blocking.method_19538(), 900.0D);
                   if (!MeteorClient.ROTATION.lookingAt(blocking.method_5829()) && RotationManager.lastGround) {
                      MeteorClient.ROTATION.snapAt(blocking.method_19538());
                   }

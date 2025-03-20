@@ -42,6 +42,7 @@ import meteordevelopment.meteorclient.systems.modules.combat.AutoMine;
 import meteordevelopment.meteorclient.systems.modules.combat.AutoTrap;
 import meteordevelopment.meteorclient.systems.modules.combat.AutoWeapon;
 import meteordevelopment.meteorclient.systems.modules.combat.AutoWeb;
+import meteordevelopment.meteorclient.systems.modules.combat.BasePlace;
 import meteordevelopment.meteorclient.systems.modules.combat.BedAura;
 import meteordevelopment.meteorclient.systems.modules.combat.BowAimbot;
 import meteordevelopment.meteorclient.systems.modules.combat.BowSpam;
@@ -69,6 +70,7 @@ import meteordevelopment.meteorclient.systems.modules.misc.BetterChat;
 import meteordevelopment.meteorclient.systems.modules.misc.BookBot;
 import meteordevelopment.meteorclient.systems.modules.misc.DebugModule;
 import meteordevelopment.meteorclient.systems.modules.misc.DiscordPresence;
+import meteordevelopment.meteorclient.systems.modules.misc.IllegalDisconnect;
 import meteordevelopment.meteorclient.systems.modules.misc.InventoryTweaks;
 import meteordevelopment.meteorclient.systems.modules.misc.MessageAura;
 import meteordevelopment.meteorclient.systems.modules.misc.NameProtect;
@@ -79,6 +81,7 @@ import meteordevelopment.meteorclient.systems.modules.misc.PacketSaver;
 import meteordevelopment.meteorclient.systems.modules.misc.ServerSpoof;
 import meteordevelopment.meteorclient.systems.modules.misc.SoundBlocker;
 import meteordevelopment.meteorclient.systems.modules.misc.Spam;
+import meteordevelopment.meteorclient.systems.modules.misc.TridentDupe;
 import meteordevelopment.meteorclient.systems.modules.misc.swarm.Swarm;
 import meteordevelopment.meteorclient.systems.modules.movement.AirJump;
 import meteordevelopment.meteorclient.systems.modules.movement.Anchor;
@@ -134,6 +137,7 @@ import meteordevelopment.meteorclient.systems.modules.player.EXPThrower;
 import meteordevelopment.meteorclient.systems.modules.player.FakePlayer;
 import meteordevelopment.meteorclient.systems.modules.player.FastUse;
 import meteordevelopment.meteorclient.systems.modules.player.GhostHand;
+import meteordevelopment.meteorclient.systems.modules.player.HotbarLock;
 import meteordevelopment.meteorclient.systems.modules.player.InstantRebreak;
 import meteordevelopment.meteorclient.systems.modules.player.LiquidInteract;
 import meteordevelopment.meteorclient.systems.modules.player.MiddleClickExtra;
@@ -161,6 +165,7 @@ import meteordevelopment.meteorclient.systems.modules.render.Chams;
 import meteordevelopment.meteorclient.systems.modules.render.CityESP;
 import meteordevelopment.meteorclient.systems.modules.render.ESP;
 import meteordevelopment.meteorclient.systems.modules.render.EntityOwner;
+import meteordevelopment.meteorclient.systems.modules.render.FOVChanger;
 import meteordevelopment.meteorclient.systems.modules.render.FreeLook;
 import meteordevelopment.meteorclient.systems.modules.render.Freecam;
 import meteordevelopment.meteorclient.systems.modules.render.Fullbright;
@@ -695,6 +700,7 @@ public class Modules extends System<Modules> {
 
    private void initCombat() {
       this.add(new AnchorAura());
+      this.add(new BasePlace());
       this.add(new AntiAnvil());
       this.add(new AntiBed());
       this.add(new ArrowDodge());
@@ -755,6 +761,7 @@ public class Modules extends System<Modules> {
       this.add(new Rotation());
       this.add(new SpeedMine());
       this.add(new PearlPhase());
+      this.add(new HotbarLock());
    }
 
    private void initMovement() {
@@ -812,6 +819,7 @@ public class Modules extends System<Modules> {
       this.add(new EntityOwner());
       this.add(new ESP());
       this.add(new Freecam());
+      this.add(new FOVChanger());
       this.add(new FreeLook());
       this.add(new Fullbright());
       this.add(new HandView());
@@ -889,6 +897,7 @@ public class Modules extends System<Modules> {
       this.add(new BookBot());
       this.add(new DiscordPresence());
       this.add(new InventoryTweaks());
+      this.add(new IllegalDisconnect());
       this.add(new MessageAura());
       this.add(new NameProtect());
       this.add(new Notebot());
@@ -896,6 +905,7 @@ public class Modules extends System<Modules> {
       this.add(new PacketCanceller());
       this.add(new ServerSpoof());
       this.add(new SoundBlocker());
+      this.add(new TridentDupe());
       this.add(new Spam());
       this.add(new PacketSaver());
       this.add(new DebugModule());

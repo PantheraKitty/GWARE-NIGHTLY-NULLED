@@ -152,31 +152,33 @@ public class Filler extends Module {
          for(int y = -r; y <= r; ++y) {
             for(int z = -r; z <= r; ++z) {
                class_2338 pos = this.mutablePos.method_10103(ex + x, ey + y, ez + z);
-               switch(((Filler.FillerMode)this.mode.get()).ordinal()) {
-               case 0:
-                  if (pos.method_10264() >= this.mc.field_1724.method_31478()) {
-                     continue;
+               if (pos.method_10264() >= this.mc.field_1687.method_31607()) {
+                  switch(((Filler.FillerMode)this.mode.get()).ordinal()) {
+                  case 0:
+                     if (pos.method_10264() >= this.mc.field_1724.method_31478()) {
+                        continue;
+                     }
+                     break;
+                  case 1:
+                     if (!this.directionCheck(pos)) {
+                        continue;
+                     }
+                     break;
+                  case 2:
+                     if (pos.method_10264() == this.mc.field_1724.method_31478() && !this.directionCheck(pos)) {
+                        continue;
+                     }
+                     break;
+                  case 3:
+                     if (!this.planeCheck(pos)) {
+                        continue;
+                     }
                   }
-                  break;
-               case 1:
-                  if (!this.directionCheck(pos)) {
-                     continue;
-                  }
-                  break;
-               case 2:
-                  if (pos.method_10264() == this.mc.field_1724.method_31478() && !this.directionCheck(pos)) {
-                     continue;
-                  }
-                  break;
-               case 3:
-                  if (!this.planeCheck(pos)) {
-                     continue;
-                  }
-               }
 
-               class_2680 state = this.mc.field_1687.method_8320(pos);
-               if (MeteorClient.BLOCK.checkPlacement(class_1802.field_8281, pos, state) && this.inPlaceRange(pos)) {
-                  placePoses.add(new class_2338(pos));
+                  class_2680 state = this.mc.field_1687.method_8320(pos);
+                  if (MeteorClient.BLOCK.checkPlacement(class_1802.field_8281, pos, state) && this.inPlaceRange(pos)) {
+                     placePoses.add(new class_2338(pos));
+                  }
                }
             }
          }

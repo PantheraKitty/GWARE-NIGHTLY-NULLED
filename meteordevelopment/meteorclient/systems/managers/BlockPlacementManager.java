@@ -107,7 +107,8 @@ public class BlockPlacementManager {
             }
          }
 
-         if (this.placeCooldowns.containsKey(blockPos) && (double)(currentTime - (Long)this.placeCooldowns.get(blockPos)) < (Double)this.antiCheatConfig.blockPlacePerBlockCooldown.get() * 1000.0D) {
+         Long lastPlaceTime = (Long)this.placeCooldowns.get(blockPos);
+         if (lastPlaceTime != null && (double)(currentTime - lastPlaceTime) < (Double)this.antiCheatConfig.blockPlacePerBlockCooldown.get() * 1000.0D) {
             return false;
          } else if (!this.checkLimit(currentTime, true)) {
             return false;

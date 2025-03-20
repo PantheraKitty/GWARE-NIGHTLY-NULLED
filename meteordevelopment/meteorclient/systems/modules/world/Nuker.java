@@ -34,6 +34,7 @@ import net.minecraft.class_1268;
 import net.minecraft.class_1802;
 import net.minecraft.class_2248;
 import net.minecraft.class_2338;
+import net.minecraft.class_2350;
 import net.minecraft.class_238;
 import net.minecraft.class_2382;
 import net.minecraft.class_243;
@@ -289,7 +290,7 @@ public class Nuker extends Module {
                         break;
                      }
 
-                     silentMine.silentBreakBlock(block, 5.0D);
+                     silentMine.silentBreakBlock(block, class_2350.field_11036, 5.0D);
                   }
 
                   this.blocks.clear();

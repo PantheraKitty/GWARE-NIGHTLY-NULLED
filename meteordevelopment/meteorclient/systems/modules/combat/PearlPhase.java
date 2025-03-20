@@ -2,18 +2,22 @@ package meteordevelopment.meteorclient.systems.modules.combat;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import meteordevelopment.meteorclient.MeteorClient;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.BoolSetting;
 import meteordevelopment.meteorclient.settings.EnumSetting;
+import meteordevelopment.meteorclient.settings.IntSetting;
 import meteordevelopment.meteorclient.settings.KeybindSetting;
 import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.systems.managers.RotationManager;
 import meteordevelopment.meteorclient.systems.modules.Categories;
 import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.systems.modules.Modules;
 import meteordevelopment.meteorclient.systems.modules.movement.MovementFix;
+import meteordevelopment.meteorclient.systems.modules.player.SilentMine;
 import meteordevelopment.meteorclient.utils.entity.ProjectileEntitySimulator;
 import meteordevelopment.meteorclient.utils.misc.Keybind;
 import meteordevelopment.orbit.EventHandler;
@@ -42,34 +46,62 @@ public class PearlPhase extends Module {
    private final Setting<Keybind> phaseBind;
    private final Setting<PearlPhase.RotateMode> rotateMode;
    private final Setting<Boolean> burrow;
+   private final Setting<Integer> burrowDelay;
    private final Setting<Boolean> antiPearlFail;
    private final Setting<Boolean> antiPearlFailStrict;
+   private final Setting<Boolean> rephase;
+   private final Setting<Integer> scaffoldBreakDelay;
    private boolean active;
    private boolean keyUnpressed;
+   private boolean blockPlaced;
+   private int burrowTimer;
    private final ProjectileEntitySimulator simulator;
+   private int scaffoldBreakTimer;
+   private boolean scaffoldCleared;
 
    public PearlPhase() {
       super(Categories.Combat, "pearl-phase", "Phases into walls using pearls");
       this.sgGeneral = this.settings.getDefaultGroup();
       this.phaseBind = this.sgGeneral.add(((KeybindSetting.Builder)((KeybindSetting.Builder)(new KeybindSetting.Builder()).name("key-bind")).description("Phase on keybind press")).build());
       this.rotateMode = this.sgGeneral.add(((EnumSetting.Builder)((EnumSetting.Builder)((EnumSetting.Builder)(new EnumSetting.Builder()).name("rotate-mode")).description("Which method of rotating should be used.")).defaultValue(PearlPhase.RotateMode.DelayedInstantWebOnly)).build());
-      this.burrow = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("borrow")).description("Places a block where you phase.")).defaultValue(true)).build());
-      this.antiPearlFail = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("anti-pearl-fail")).description("Hits entites below you when you phase.")).defaultValue(true)).build());
-      this.antiPearlFailStrict = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("anti-pearl-fail-strict")).description("Waits for the entity to disapear before phasing.")).defaultValue(false)).build());
+      this.burrow = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("burrow")).description("Places a block where you phase.")).defaultValue(true)).build());
+      this.burrowDelay = this.sgGeneral.add(((IntSetting.Builder)((IntSetting.Builder)((IntSetting.Builder)(new IntSetting.Builder()).name("burrow-delay")).description("Delay in ticks after placing the block before phasing.")).defaultValue(0)).min(0).max(10).sliderMin(0).sliderMax(10).build());
+      this.antiPearlFail = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("anti-pearl-fail")).description("Hits entities below you when you phase.")).defaultValue(true)).build());
+      this.antiPearlFailStrict = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("anti-pearl-fail-strict")).description("Waits for the entity to disappear before phasing.")).defaultValue(false)).build());
+      this.rephase = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("rephase")).description("Automatically rephase when the keybind is held down.")).defaultValue(false)).build());
+      SettingGroup var10001 = this.sgGeneral;
+      IntSetting.Builder var10002 = ((IntSetting.Builder)((IntSetting.Builder)((IntSetting.Builder)(new IntSetting.Builder()).name("scaffold-break-delay")).description("Delay in ticks before throwing the pearl after breaking scaffolds.")).defaultValue(1)).min(0).max(20).sliderMin(0).sliderMax(10);
+      Setting var10003 = this.antiPearlFail;
+      Objects.requireNonNull(var10003);
+      this.scaffoldBreakDelay = var10001.add(((IntSetting.Builder)var10002.visible(var10003::get)).build());
       this.active = false;
       this.keyUnpressed = false;
+      this.blockPlaced = false;
+      this.burrowTimer = 0;
       this.simulator = new ProjectileEntitySimulator();
+      this.scaffoldBreakTimer = 0;
+      this.scaffoldCleared = false;
    }
 
    private void activate() {
       this.active = true;
+      this.blockPlaced = false;
+      this.burrowTimer = 0;
+      this.scaffoldBreakTimer = 0;
+      this.scaffoldCleared = false;
       if (this.mc.field_1724 != null && this.mc.field_1687 != null) {
          this.update();
+      } else {
+         this.deactivate(false);
       }
    }
 
    private void deactivate(boolean phased) {
       this.active = false;
+      this.blockPlaced = false;
+      this.burrowTimer = 0;
+      this.scaffoldBreakTimer = 0;
+      this.scaffoldCleared = false;
       if (phased) {
          this.info("Phased", new Object[0]);
       }
@@ -96,46 +128,87 @@ public class PearlPhase extends Module {
                this.deactivate(false);
             }
          }
+      } else {
+         this.deactivate(false);
       }
    }
 
    @EventHandler
    private void onTick(TickEvent.Post event) {
       if (this.active) {
-         class_243 targetPos = this.calculateTargetPos();
-         float[] angle = MeteorClient.ROTATION.getRotation(targetPos);
-         switch(((PearlPhase.RotateMode)this.rotateMode.get()).ordinal()) {
-         case 0:
-            MeteorClient.ROTATION.requestRotation(targetPos, 1000.0D);
-            if (MeteorClient.ROTATION.lookingAt(class_238.method_30048(targetPos, 0.05D, 0.05D, 0.05D))) {
-               this.throwPearl(angle[0], angle[1]);
+         if ((Boolean)this.burrow.get() && !this.blockPlaced) {
+            this.placeBlock();
+            this.blockPlaced = true;
+            this.burrowTimer = (Integer)this.burrowDelay.get();
+         } else if (this.burrowTimer > 0) {
+            --this.burrowTimer;
+         } else if (this.scaffoldBreakTimer > 0) {
+            --this.scaffoldBreakTimer;
+            if (this.scaffoldBreakTimer == 0) {
+               this.scaffoldCleared = true;
             }
-            break;
-         case 1:
-            if (this.mc.field_1724.method_24828()) {
-               MeteorClient.ROTATION.snapAt(targetPos);
-               this.throwPearl(angle[0], angle[1]);
-            }
-            break;
-         case 2:
-            MeteorClient.ROTATION.requestRotation(targetPos, 1000.0D);
-            if (MeteorClient.ROTATION.lookingAt(class_238.method_30048(targetPos, 0.05D, 0.05D, 0.05D))) {
-               MeteorClient.ROTATION.snapAt(targetPos);
-               this.throwPearl(angle[0], angle[1]);
-            }
-            break;
-         case 3:
-            MeteorClient.ROTATION.requestRotation(targetPos, 1000.0D);
-            if (MeteorClient.ROTATION.lookingAt(class_238.method_30048(targetPos, 0.05D, 0.05D, 0.05D))) {
-               if (MovementFix.inWebs) {
-                  MeteorClient.ROTATION.snapAt(targetPos);
+
+         } else if (!(Boolean)this.antiPearlFailStrict.get() || !this.mc.field_1687.method_8320(this.mc.field_1724.method_24515()).method_27852(class_2246.field_16492)) {
+            class_243 targetPos = this.calculateTargetPos();
+            float[] angle = MeteorClient.ROTATION.getRotation(targetPos);
+            switch(((PearlPhase.RotateMode)this.rotateMode.get()).ordinal()) {
+            case 0:
+               MeteorClient.ROTATION.requestRotation(targetPos, 1000.0D);
+               if (MeteorClient.ROTATION.lookingAt(class_238.method_30048(targetPos, 0.05D, 0.05D, 0.05D))) {
+                  this.throwPearl(angle[0], angle[1]);
                }
+               break;
+            case 1:
+               if (this.mc.field_1724.method_24828()) {
+                  MeteorClient.ROTATION.snapAt(targetPos);
+                  this.throwPearl(angle[0], angle[1]);
+               }
+               break;
+            case 2:
+               MeteorClient.ROTATION.requestRotation(targetPos, 1000.0D);
+               if (MeteorClient.ROTATION.lookingAt(class_238.method_30048(targetPos, 0.05D, 0.05D, 0.05D))) {
+                  MeteorClient.ROTATION.snapAt(targetPos);
+                  this.throwPearl(angle[0], angle[1]);
+               }
+               break;
+            case 3:
+               MeteorClient.ROTATION.requestRotation(targetPos, 1000.0D);
+               if (MeteorClient.ROTATION.lookingAt(class_238.method_30048(targetPos, 0.05D, 0.05D, 0.05D))) {
+                  if (MovementFix.inWebs) {
+                     MeteorClient.ROTATION.snapAt(targetPos);
+                  }
 
-               this.throwPearl(angle[0], angle[1]);
+                  this.throwPearl(angle[0], angle[1]);
+               }
             }
-         }
 
+         }
       }
+   }
+
+   private void placeBlock() {
+      class_243 targetPos = this.calculateTargetPos();
+      class_238 newHitbox = this.mc.field_1724.method_5829().method_989(targetPos.field_1352 - this.mc.field_1724.method_23317(), 0.0D, targetPos.field_1350 - this.mc.field_1724.method_23321()).method_1014(0.05D);
+      List<class_2338> placePoses = new ArrayList();
+      int minX = (int)Math.floor(newHitbox.field_1323);
+      int maxX = (int)Math.floor(newHitbox.field_1320);
+      int minZ = (int)Math.floor(newHitbox.field_1321);
+      int maxZ = (int)Math.floor(newHitbox.field_1324);
+
+      for(int x = minX; x <= maxX; ++x) {
+         for(int z = minZ; z <= maxZ; ++z) {
+            class_2338 feetPos = new class_2338(x, this.mc.field_1724.method_24515().method_10264(), z);
+            placePoses.add(feetPos);
+         }
+      }
+
+      if (MeteorClient.BLOCK.beginPlacement(placePoses, class_1802.field_8281)) {
+         placePoses.forEach((blockPos) -> {
+            MeteorClient.BLOCK.placeBlock(class_1802.field_8281, blockPos);
+         });
+         MeteorClient.BLOCK.endPlacement();
+      }
+
    }
 
    private void throwPearl(float yaw, float pitch) {
@@ -159,35 +232,18 @@ public class PearlPhase extends Module {
             }
          }
 
-         if (this.mc.field_1687.method_8320(this.mc.field_1724.method_24515()).method_27852(class_2246.field_16492)) {
-            this.mc.method_1562().method_52787(new class_2846(class_2847.field_12968, this.mc.field_1724.method_24515(), class_2350.field_11036, this.mc.field_1687.method_41925().method_41937().method_41942()));
-            if ((Boolean)this.antiPearlFailStrict.get()) {
-               return;
+         if (this.mc.field_1687.method_8320(this.mc.field_1724.method_24515()).method_27852(class_2246.field_16492) && !this.scaffoldCleared) {
+            SilentMine silentMine = (SilentMine)Modules.get().get(SilentMine.class);
+            if (silentMine.isActive()) {
+               silentMine.silentBreakBlock(this.mc.field_1724.method_24515(), class_2350.field_11036, 100.0D);
+            } else {
+               int sequence = this.mc.field_1687.method_41925().method_41937().method_41942();
+               this.mc.method_1562().method_52787(new class_2846(class_2847.field_12968, this.mc.field_1724.method_24515(), class_2350.field_11036, sequence));
+               this.mc.method_1562().method_52787(new class_2846(class_2847.field_12973, this.mc.field_1724.method_24515(), class_2350.field_11036, sequence + 1));
             }
-         }
-      }
 
-      if ((Boolean)this.burrow.get() && !this.mc.field_1724.method_6115()) {
-         class_243 targetPos = this.calculateTargetPos();
-         class_238 newHitbox = this.mc.field_1724.method_5829().method_989(targetPos.field_1352 - this.mc.field_1724.method_23317(), 0.0D, targetPos.field_1350 - this.mc.field_1724.method_23321()).method_1014(0.05D);
-         List<class_2338> placePoses = new ArrayList();
-         int minX = (int)Math.floor(newHitbox.field_1323);
-         int maxX = (int)Math.floor(newHitbox.field_1320);
-         int minZ = (int)Math.floor(newHitbox.field_1321);
-         int maxZ = (int)Math.floor(newHitbox.field_1324);
-
-         for(int x = minX; x <= maxX; ++x) {
-            for(int z = minZ; z <= maxZ; ++z) {
-               class_2338 feetPos = new class_2338(x, this.mc.field_1724.method_24515().method_10264(), z);
-               placePoses.add(feetPos);
-            }
-         }
-
-         if (MeteorClient.BLOCK.beginPlacement(placePoses, class_1802.field_8281)) {
-            placePoses.forEach((blockPos) -> {
-               MeteorClient.BLOCK.placeBlock(class_1802.field_8281, blockPos);
-            });
-            MeteorClient.BLOCK.endPlacement();
+            this.scaffoldBreakTimer = (Integer)this.scaffoldBreakDelay.get();
+            return;
          }
       }
 
@@ -211,6 +267,10 @@ public class PearlPhase extends Module {
       if (((Keybind)this.phaseBind.get()).isPressed() && this.keyUnpressed && !(this.mc.field_1755 instanceof class_408)) {
          this.activate();
          this.keyUnpressed = false;
+      }
+
+      if ((Boolean)this.rephase.get() && ((Keybind)this.phaseBind.get()).isPressed() && !this.active) {
+         this.activate();
       }
 
       this.update();

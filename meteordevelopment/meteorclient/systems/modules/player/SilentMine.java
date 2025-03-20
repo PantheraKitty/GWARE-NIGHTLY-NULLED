@@ -26,6 +26,7 @@ import meteordevelopment.meteorclient.utils.render.color.Color;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import meteordevelopment.meteorclient.utils.world.BlockUtils;
 import meteordevelopment.orbit.EventHandler;
+import net.minecraft.class_1802;
 import net.minecraft.class_2246;
 import net.minecraft.class_2338;
 import net.minecraft.class_2350;
@@ -56,6 +57,8 @@ public class SilentMine extends Module {
    private double currentGameTickCalculated;
    private boolean needDelayedDestroySwapBack;
    private boolean needRebreakSwapBack;
+   private int totemPopTicks;
+   private boolean isBeingTotemPopped;
 
    public SilentMine() {
       super(Categories.Player, "silent-mine", "Allows you to mine blocks without holding a pickaxe");
@@ -86,6 +89,8 @@ public class SilentMine extends Module {
       this.currentGameTickCalculated = 0.0D;
       this.needDelayedDestroySwapBack = false;
       this.needRebreakSwapBack = false;
+      this.totemPopTicks = 0;
+      this.isBeingTotemPopped = false;
       this.currentGameTickCalculated = RenderUtils.getCurrentGameTickCalculated();
    }
 
@@ -95,6 +100,17 @@ public class SilentMine extends Module {
    @EventHandler
    private void onTick(TickEvent.Pre event) {
       this.currentGameTickCalculated = RenderUtils.getCurrentGameTickCalculated();
+      if (this.mc.field_1724 != null && this.mc.field_1724.method_6115() && this.mc.field_1724.method_6030().method_7909() == class_1802.field_8288) {
+         this.isBeingTotemPopped = true;
+         this.totemPopTicks = 0;
+      } else {
+         ++this.totemPopTicks;
+      }
+
+      if (this.totemPopTicks > 30) {
+         this.isBeingTotemPopped = false;
+      }
+
       if (this.hasDelayedDestroy()) {
          this.lastDelayedDestroyBlockPos = this.delayedDestroyBlock.blockPos;
       } else {
@@ -119,7 +135,7 @@ public class SilentMine extends Module {
       FindItemResult result;
       if (this.hasDelayedDestroy() && this.delayedDestroyBlock.ticksHeldPickaxe <= (Integer)this.singleBreakFailTicks.get()) {
          blockState = this.mc.field_1687.method_8320(this.delayedDestroyBlock.blockPos);
-         if (this.delayedDestroyBlock.isReady()) {
+         if (this.delayedDestroyBlock.isReady() && !this.isBeingTotemPopped) {
             result = InvUtils.findFastestTool(blockState);
             if (result.found() && this.mc.field_1724.method_31548().field_7545 != result.slot() && MeteorClient.SWAP.beginSwap(result, false)) {
                this.needDelayedDestroySwapBack = true;
@@ -131,7 +147,7 @@ public class SilentMine extends Module {
          }
       }
 
-      if (this.rebreakBlock != null) {
+      if (this.rebreakBlock != null && !this.isBeingTotemPopped) {
          blockState = this.mc.field_1687.method_8320(this.rebreakBlock.blockPos);
          if (this.rebreakBlock.isReady()) {
             if (this.inBreakRange(this.rebreakBlock.blockPos)) {
@@ -172,15 +188,12 @@ public class SilentMine extends Module {
 
    }
 
-   public void silentBreakBlock(class_2338 pos, double priority) {
-      this.silentBreakBlock(pos, class_2350.field_11036, priority);
-   }
-
    public void silentBreakBlock(class_2338 blockPos, class_2350 direction, double priority) {
       if (this.isActive()) {
          if (blockPos != null && !this.alreadyBreaking(blockPos)) {
             if (BlockUtils.canBreak(blockPos, this.mc.field_1687.method_8320(blockPos))) {
                if (this.inBreakRange(blockPos)) {
+                  boolean isAntiSwimBlock = blockPos.equals(this.mc.field_1724.method_24515().method_10084());
                   if (!this.hasDelayedDestroy()) {
                      boolean willResetPrimary = this.rebreakBlock != null && !this.canRebreakRebreakBlock();
                      if (willResetPrimary && this.rebreakBlock.priority < priority) {
@@ -200,7 +213,7 @@ public class SilentMine extends Module {
                         this.rebreakBlock = null;
                      }
 
-                     if (this.rebreakBlock == null) {
+                     if (this.rebreakBlock == null || isAntiSwimBlock) {
                         this.rebreakBlock = new SilentMine.SilentMineBlock(blockPos, direction, priority, true);
                         this.rebreakBlock.startBreaking(false);
                      }
@@ -237,6 +250,19 @@ public class SilentMine extends Module {
 
    public class_2338 getDelayedDestroyBlockPos() {
       return this.delayedDestroyBlock == null ? null : this.delayedDestroyBlock.blockPos;
+   }
+
+   public void cancelBreaking() {
+      if (this.rebreakBlock != null) {
+         this.rebreakBlock.cancelBreaking();
+         this.rebreakBlock = null;
+      }
+
+      if (this.delayedDestroyBlock != null) {
+         this.delayedDestroyBlock.cancelBreaking();
+         this.delayedDestroyBlock = null;
+      }
+
    }
 
    public class_2338 getLastDelayedDestroyBlockPos() {

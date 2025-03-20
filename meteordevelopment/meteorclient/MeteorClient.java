@@ -131,6 +131,9 @@ public class MeteorClient implements ClientModInitializer {
 
    }
 
+   public static void onRender(float tickDelta) {
+   }
+
    private void toggleGui() {
       if (Utils.canCloseGui()) {
          mc.field_1755.method_25419();

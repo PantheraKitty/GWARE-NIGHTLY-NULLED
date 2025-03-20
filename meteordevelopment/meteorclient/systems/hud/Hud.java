@@ -30,6 +30,7 @@ import meteordevelopment.meteorclient.systems.hud.elements.ItemHud;
 import meteordevelopment.meteorclient.systems.hud.elements.LagNotifierHud;
 import meteordevelopment.meteorclient.systems.hud.elements.MeteorTextHud;
 import meteordevelopment.meteorclient.systems.hud.elements.ModuleInfosHud;
+import meteordevelopment.meteorclient.systems.hud.elements.PhaseCompassHud;
 import meteordevelopment.meteorclient.systems.hud.elements.PlayerModelHud;
 import meteordevelopment.meteorclient.systems.hud.elements.PlayerRadarHud;
 import meteordevelopment.meteorclient.systems.hud.elements.PotionTimersHud;
@@ -96,6 +97,7 @@ public class Hud extends System<Hud> implements Iterable<HudElement> {
       this.register(ItemHud.INFO);
       this.register(InventoryHud.INFO);
       this.register(CompassHud.INFO);
+      this.register(PhaseCompassHud.INFO);
       this.register(ArmorHud.INFO);
       this.register(HoleHud.INFO);
       this.register(PlayerModelHud.INFO);

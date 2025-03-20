@@ -32,9 +32,7 @@ import net.minecraft.class_3710;
 import net.minecraft.class_3865;
 import net.minecraft.class_3965;
 import net.minecraft.class_408;
-import net.minecraft.class_433;
 import net.minecraft.class_4739;
-import net.minecraft.class_490;
 import net.minecraft.class_239.class_240;
 
 public class Offhand extends Module {
@@ -66,7 +64,7 @@ public class Offhand extends Module {
       priority = 1199
    )
    private void onTick(TickEvent.Pre event) {
-      if (this.mc.field_1755 == null || this.mc.field_1755 instanceof class_408 || this.mc.field_1755 instanceof class_490 || this.mc.field_1755 instanceof class_433) {
+      if (this.mc.field_1755 == null || this.mc.field_1755 instanceof class_408) {
          if ((Boolean)this.mainHandTotem.get()) {
             this.updateMainHandTotem();
          }

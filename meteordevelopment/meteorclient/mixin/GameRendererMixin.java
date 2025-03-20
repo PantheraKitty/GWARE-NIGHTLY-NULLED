@@ -244,4 +244,13 @@ public abstract class GameRendererMixin {
       }
 
    }
+
+   @Inject(
+      method = {"render"},
+      at = {@At("HEAD")}
+   )
+   private void onRender(class_9779 tickCounter, boolean tick, CallbackInfo ci) {
+      float tickDelta = tickCounter.method_60637(tick);
+      MeteorClient.onRender(tickDelta);
+   }
 }

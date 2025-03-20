@@ -44,7 +44,7 @@ public class RotationManager {
    public double lastY = 0.0D;
    public double lastZ = 0.0D;
    private boolean shouldFulfilRequest = false;
-   private static RotationManager.RotationRequest request = new RotationManager.RotationRequest();
+   private static final RotationManager.RotationRequest request = new RotationManager.RotationRequest();
    private final AntiCheatConfig antiCheatConfig = AntiCheatConfig.get();
 
    public RotationManager() {
@@ -263,7 +263,7 @@ public class RotationManager {
    @EventHandler(
       priority = -200
    )
-   public void onPreJump(PlayerJumpEvent.Pre e) {
+   public void onPreJump(PlayerJumpEvent.Pre event) {
       if (MovementFix.MOVE_FIX.isActive() && MovementFix.MOVE_FIX.updateMode.get() != MovementFix.UpdateMode.Mouse) {
          this.moveFixRotation();
       }
@@ -273,7 +273,7 @@ public class RotationManager {
    @EventHandler(
       priority = -200
    )
-   public void onTravel(PlayerTravelEvent.Pre e) {
+   public void onTravel(PlayerTravelEvent.Pre event) {
       if (MovementFix.MOVE_FIX.isActive() && MovementFix.MOVE_FIX.updateMode.get() != MovementFix.UpdateMode.Mouse) {
          this.moveFixRotation();
       }
@@ -283,7 +283,7 @@ public class RotationManager {
    @EventHandler(
       priority = 200
    )
-   public void onKeyInput(KeyboardInputEvent e) {
+   public void onKeyInput(KeyboardInputEvent event) {
       if (MovementFix.MOVE_FIX.isActive() && MovementFix.MOVE_FIX.updateMode.get() != MovementFix.UpdateMode.Mouse) {
          this.moveFixRotation();
       }
@@ -309,8 +309,8 @@ public class RotationManager {
 
    }
 
-   public boolean raytraceCheck(class_243 pos, double y, double p, class_238 box) {
-      class_243 vec = new class_243(Math.cos(Math.toRadians(y + 90.0D)) * Math.abs(Math.cos(Math.toRadians(p))), -Math.sin(Math.toRadians(p)), Math.sin(Math.toRadians(y + 90.0D)) * Math.abs(Math.cos(Math.toRadians(p))));
+   public boolean raytraceCheck(class_243 pos, double yaw, double pitch, class_238 box) {
+      class_243 vec = new class_243(Math.cos(Math.toRadians(yaw + 90.0D)) * Math.abs(Math.cos(Math.toRadians(pitch))), -Math.sin(Math.toRadians(pitch)), Math.sin(Math.toRadians(yaw + 90.0D)) * Math.abs(Math.cos(Math.toRadians(pitch))));
       double rayX = pos.field_1352;
       double rayY = pos.field_1351;
       double rayZ = pos.field_1350;
@@ -359,16 +359,14 @@ public class RotationManager {
    }
 
    public void setRenderRotation(float yaw, float pitch, boolean force) {
-      if (MeteorClient.mc.field_1724 != null) {
-         if (MeteorClient.mc.field_1724.field_6012 != this.ticksExisted || force) {
-            this.ticksExisted = MeteorClient.mc.field_1724.field_6012;
-            prevPitch = renderPitch;
-            prevRenderYawOffset = renderYawOffset;
-            renderYawOffset = this.getRenderYawOffset(yaw, prevRenderYawOffset);
-            prevRotationYawHead = rotationYawHead;
-            rotationYawHead = yaw;
-            renderPitch = pitch;
-         }
+      if (MeteorClient.mc.field_1724 != null && (MeteorClient.mc.field_1724.field_6012 != this.ticksExisted || force)) {
+         this.ticksExisted = MeteorClient.mc.field_1724.field_6012;
+         prevPitch = renderPitch;
+         prevRenderYawOffset = renderYawOffset;
+         renderYawOffset = this.getRenderYawOffset(yaw, prevRenderYawOffset);
+         prevRotationYawHead = rotationYawHead;
+         rotationYawHead = yaw;
+         renderPitch = pitch;
       }
    }
 

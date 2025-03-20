@@ -55,31 +55,35 @@ public class AirPlace extends Module {
       this.range = var10001.add(((DoubleSetting.Builder)var10002.visible(var10003::get)).defaultValue(5.0D).min(0.0D).sliderMax(6.0D).build());
    }
 
-   @EventHandler
+   @EventHandler(
+      priority = -100
+   )
    private void onTick(TickEvent.Post event) {
-      double r = (Boolean)this.customRange.get() ? (Double)this.range.get() : this.mc.field_1724.method_55754();
-      this.hitResult = this.mc.method_1560().method_5745(r, 0.0F, false);
-      class_239 var5 = this.hitResult;
-      if (var5 instanceof class_3965) {
-         class_3965 blockHitResult = (class_3965)var5;
-         if (this.mc.field_1724.method_6047().method_7909() instanceof class_1747 || this.mc.field_1724.method_6047().method_7909() instanceof class_1826) {
-            if (this.mc.field_1690.field_1904.method_1434() && BlockUtils.canPlace(blockHitResult.method_17777())) {
-               class_1268 hand = class_1268.field_5808;
-               if ((Boolean)this.grimBypass.get()) {
-                  this.mc.method_1562().method_52787(new class_2846(class_2847.field_12969, new class_2338(0, 0, 0), class_2350.field_11033));
-                  hand = class_1268.field_5810;
+      if (!this.mc.field_1724.method_6115()) {
+         double r = (Boolean)this.customRange.get() ? (Double)this.range.get() : this.mc.field_1724.method_55754();
+         this.hitResult = this.mc.method_1560().method_5745(r, 0.0F, false);
+         class_239 var5 = this.hitResult;
+         if (var5 instanceof class_3965) {
+            class_3965 blockHitResult = (class_3965)var5;
+            if (this.mc.field_1724.method_6047().method_7909() instanceof class_1747 || this.mc.field_1724.method_6047().method_7909() instanceof class_1826) {
+               if (this.mc.field_1690.field_1904.method_1434() && BlockUtils.canPlace(blockHitResult.method_17777())) {
+                  class_1268 hand = class_1268.field_5808;
+                  if ((Boolean)this.grimBypass.get()) {
+                     this.mc.method_1562().method_52787(new class_2846(class_2847.field_12969, new class_2338(0, 0, 0), class_2350.field_11033));
+                     hand = class_1268.field_5810;
+                  }
+
+                  BlockUtils.place(blockHitResult.method_17777(), hand, this.mc.field_1724.method_31548().field_7545, false, 0, true, true, false);
+                  if ((Boolean)this.grimBypass.get()) {
+                     this.mc.method_1562().method_52787(new class_2846(class_2847.field_12969, new class_2338(0, 0, 0), class_2350.field_11033));
+                  }
                }
 
-               BlockUtils.place(blockHitResult.method_17777(), hand, this.mc.field_1724.method_31548().field_7545, false, 0, true, true, false);
-               if ((Boolean)this.grimBypass.get()) {
-                  this.mc.method_1562().method_52787(new class_2846(class_2847.field_12969, new class_2338(0, 0, 0), class_2350.field_11033));
-               }
+               return;
             }
-
-            return;
          }
-      }
 
+      }
    }
 
    @EventHandler

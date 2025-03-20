@@ -47,13 +47,18 @@ public class AutoMine extends Module {
    private final SettingGroup sgRender;
    private final double INVALID_SCORE;
    private final Setting<Double> range;
+   private final Setting<Double> maxTargetMoveDistance;
    private final Setting<SortPriority> targetPriority;
    private final Setting<Boolean> ignoreNakeds;
+   private final Setting<AutoMine.ExtendBreakMode> extendBreakMode;
    private final Setting<AutoMine.AntiSwimMode> antiSwim;
    private final Setting<AutoMine.AntiSurroundMode> antiSurroundMode;
    private final Setting<Boolean> antiSurroundInnerSnap;
    private final Setting<Boolean> antiSurroundOuterSnap;
    private final Setting<Double> antiSurroundOuterCooldown;
+   private final Setting<Boolean> breakIndicatorsSync;
+   private final Setting<Boolean> breakIndicatorsSyncOnlyFriends;
+   private final Setting<Double> breakIndicatorSyncPenalty;
    private final Setting<Boolean> renderDebugScores;
    private SilentMine silentMine;
    private class_1657 targetPlayer;
@@ -67,28 +72,34 @@ public class AutoMine extends Module {
       this.sgGeneral = this.settings.getDefaultGroup();
       this.sgRender = this.settings.createGroup("Render");
       this.INVALID_SCORE = -1000.0D;
-      this.range = this.sgGeneral.add(((DoubleSetting.Builder)((DoubleSetting.Builder)(new DoubleSetting.Builder()).name("range")).description("Max range to target")).defaultValue(6.5D).min(0.0D).sliderMax(7.0D).build());
-      this.targetPriority = this.sgGeneral.add(((EnumSetting.Builder)((EnumSetting.Builder)((EnumSetting.Builder)(new EnumSetting.Builder()).name("target-priority")).description("How to choose the target")).defaultValue(SortPriority.ClosestAngle)).build());
-      this.ignoreNakeds = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("ignore-nakeds")).description("Ignore players with no items.")).defaultValue(true)).build());
-      this.antiSwim = this.sgGeneral.add(((EnumSetting.Builder)((EnumSetting.Builder)((EnumSetting.Builder)(new EnumSetting.Builder()).name("anti-swim-mode")).description("Starts mining your head block when the enemy starts mining your feet")).defaultValue(AutoMine.AntiSwimMode.OnMine)).build());
-      this.antiSurroundMode = this.sgGeneral.add(((EnumSetting.Builder)((EnumSetting.Builder)((EnumSetting.Builder)(new EnumSetting.Builder()).name("anti-surround-mode")).description("Places crystals in places to prevent surround")).defaultValue(AutoMine.AntiSurroundMode.Auto)).build());
-      this.antiSurroundInnerSnap = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("anti-surround-inner-snap")).description("Instantly snaps the camera when it needs to for inner place")).defaultValue(true)).visible(() -> {
+      this.range = this.sgGeneral.add(((DoubleSetting.Builder)(new DoubleSetting.Builder()).name("range")).defaultValue(6.5D).min(0.0D).sliderMax(7.0D).build());
+      this.maxTargetMoveDistance = this.sgGeneral.add(((DoubleSetting.Builder)(new DoubleSetting.Builder()).name("max-target-move-distance")).defaultValue(1.7D).min(1.0D).sliderMax(10.0D).build());
+      this.targetPriority = this.sgGeneral.add(((EnumSetting.Builder)((EnumSetting.Builder)(new EnumSetting.Builder()).name("target-priority")).defaultValue(SortPriority.ClosestAngle)).build());
+      this.ignoreNakeds = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("ignore-nakeds")).defaultValue(true)).build());
+      this.extendBreakMode = this.sgGeneral.add(((EnumSetting.Builder)((EnumSetting.Builder)(new EnumSetting.Builder()).name("extend-break-mode")).defaultValue(AutoMine.ExtendBreakMode.None)).build());
+      this.antiSwim = this.sgGeneral.add(((EnumSetting.Builder)((EnumSetting.Builder)(new EnumSetting.Builder()).name("anti-swim-mode")).defaultValue(AutoMine.AntiSwimMode.OnMineAndSwim)).build());
+      this.antiSurroundMode = this.sgGeneral.add(((EnumSetting.Builder)((EnumSetting.Builder)(new EnumSetting.Builder()).name("anti-surround-mode")).defaultValue(AutoMine.AntiSurroundMode.Auto)).build());
+      this.antiSurroundInnerSnap = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("anti-surround-inner-snap")).defaultValue(true)).visible(() -> {
          return this.antiSurroundMode.get() == AutoMine.AntiSurroundMode.Auto || this.antiSurroundMode.get() == AutoMine.AntiSurroundMode.Inner;
       })).build());
-      this.antiSurroundOuterSnap = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("anti-surround-outer-snap")).description("Instantly snaps the camera when it needs to for outer place")).defaultValue(true)).visible(() -> {
+      this.antiSurroundOuterSnap = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("anti-surround-outer-snap")).defaultValue(true)).visible(() -> {
          return this.antiSurroundMode.get() == AutoMine.AntiSurroundMode.Auto || this.antiSurroundMode.get() == AutoMine.AntiSurroundMode.Outer;
       })).build());
-      this.antiSurroundOuterCooldown = this.sgGeneral.add(((DoubleSetting.Builder)((DoubleSetting.Builder)((DoubleSetting.Builder)(new DoubleSetting.Builder()).name("anti-surround-outer-cooldown")).description("Time to wait between placing crystals")).defaultValue(0.1D).min(0.0D).sliderMax(1.0D).visible(() -> {
+      this.antiSurroundOuterCooldown = this.sgGeneral.add(((DoubleSetting.Builder)((DoubleSetting.Builder)(new DoubleSetting.Builder()).name("anti-surround-outer-cooldown")).defaultValue(0.1D).min(0.0D).sliderMax(1.0D).visible(() -> {
          return this.antiSurroundMode.get() == AutoMine.AntiSurroundMode.Auto || this.antiSurroundMode.get() == AutoMine.AntiSurroundMode.Outer;
       })).build());
-      this.renderDebugScores = this.sgRender.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("render-debug-scores")).description("Renders scores and their blocks.")).defaultValue(false)).build());
+      this.breakIndicatorsSync = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("break-indicators-sync")).defaultValue(true)).build());
+      this.breakIndicatorsSyncOnlyFriends = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("break-indicators-sync-only-friends")).defaultValue(false)).build());
+      this.breakIndicatorSyncPenalty = this.sgGeneral.add(((DoubleSetting.Builder)((DoubleSetting.Builder)(new DoubleSetting.Builder()).name("break-indicators-sync-penalty")).defaultValue(8.5D).min(0.0D).sliderMax(25.0D).visible(() -> {
+         return (Boolean)this.breakIndicatorsSync.get();
+      })).build());
+      this.renderDebugScores = this.sgRender.add(((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("render-debug-scores")).defaultValue(false)).build());
       this.silentMine = null;
       this.targetPlayer = null;
       this.target1 = null;
       this.target2 = null;
       this.ignorePos = null;
       this.lastOuterPlaceTime = 0L;
-      this.silentMine = (SilentMine)Modules.get().get(SilentMine.class);
    }
 
    public void onActivate() {
@@ -105,6 +116,18 @@ public class AutoMine extends Module {
          this.silentMine = (SilentMine)Modules.get().get(SilentMine.class);
       }
 
+      if (this.targetPlayer != null && (this.target1 != null || this.target2 != null)) {
+         class_2338 currentTargetPos = this.target1 != null ? this.target1.blockPos : this.target2.blockPos;
+         double distance = this.targetPlayer.method_19538().method_1022(class_243.method_24953(currentTargetPos));
+         if (distance > (Double)this.maxTargetMoveDistance.get()) {
+            this.silentMine.cancelBreaking();
+            this.target1 = null;
+            this.target2 = null;
+            this.update();
+         }
+      }
+
+      this.update();
    }
 
    @EventHandler
@@ -191,25 +214,7 @@ public class AutoMine extends Module {
       class_2680 selfFeetBlock = this.mc.field_1687.method_8320(this.mc.field_1724.method_24515());
       class_2680 selfHeadBlock = this.mc.field_1687.method_8320(this.mc.field_1724.method_24515().method_10084());
       boolean shouldBreakSelfHeadBlock = BlockUtils.canBreak(this.mc.field_1724.method_24515().method_10084(), selfHeadBlock) && (selfHeadBlock.method_27852(class_2246.field_10540) || selfHeadBlock.method_27852(class_2246.field_22423));
-      boolean prioHead = false;
-      if (this.antiSwim.get() == AutoMine.AntiSwimMode.Always && shouldBreakSelfHeadBlock) {
-         this.silentMine.silentBreakBlock(this.mc.field_1724.method_24515().method_10084(), 10.0D);
-         prioHead = true;
-      }
-
-      if (this.antiSwim.get() == AutoMine.AntiSwimMode.OnMineAndSwim && this.mc.field_1724.method_20448() && shouldBreakSelfHeadBlock) {
-         this.silentMine.silentBreakBlock(this.mc.field_1724.method_24515().method_10084(), 30.0D);
-         prioHead = true;
-      }
-
-      if (this.antiSwim.get() == AutoMine.AntiSwimMode.OnMine || this.antiSwim.get() == AutoMine.AntiSwimMode.OnMineAndSwim) {
-         BreakIndicators breakIndicators = (BreakIndicators)Modules.get().get(BreakIndicators.class);
-         if (breakIndicators.isBlockBeingBroken(this.mc.field_1724.method_24515()) && shouldBreakSelfHeadBlock) {
-            this.silentMine.silentBreakBlock(this.mc.field_1724.method_24515().method_10084(), 20.0D);
-            prioHead = true;
-         }
-      }
-
+      boolean prioTarget = false;
       this.targetPlayer = (class_1657)TargetUtils.get((entity) -> {
          if (!entity.equals(this.mc.field_1724) && !entity.equals(this.mc.field_1719)) {
             if (entity instanceof class_1657) {
@@ -235,31 +240,44 @@ public class AutoMine extends Module {
          }
       }, (SortPriority)this.targetPriority.get());
       if (this.targetPlayer != null) {
-         if (!this.silentMine.hasDelayedDestroy() || !selfHeadBlock.method_26204().equals(class_2246.field_10540) || !selfFeetBlock.method_26215() || this.silentMine.getRebreakBlockPos() != this.mc.field_1724.method_24515().method_10084()) {
-            if (!prioHead) {
-               this.findTargetBlocks();
-               boolean isTargetingFeetBlock = this.target1 != null && this.target1.isFeetBlock || this.target2 != null && this.target2.isFeetBlock;
-               if (isTargetingFeetBlock || (this.target1 == null || !this.target1.blockPos.equals(this.silentMine.getRebreakBlockPos())) && (this.target2 == null || !this.target2.blockPos.equals(this.silentMine.getRebreakBlockPos()))) {
-                  boolean hasBothInProgress = this.silentMine.hasDelayedDestroy() && this.silentMine.hasRebreakBlock() && !this.silentMine.canRebreakRebreakBlock();
-                  if (!hasBothInProgress) {
-                     Queue<class_2338> targetBlocks = new LinkedList();
-                     if (this.target1 != null) {
-                        targetBlocks.add(this.target1.blockPos);
-                     }
+         this.findTargetBlocks();
+         if (!this.silentMine.hasDelayedDestroy()) {
+            Queue<class_2338> targetBlocks = new LinkedList();
+            if (this.target1 != null) {
+               targetBlocks.add(this.target1.blockPos);
+            }
 
-                     if (this.target2 != null) {
-                        targetBlocks.add(this.target2.blockPos);
-                     }
+            if (this.target2 != null) {
+               targetBlocks.add(this.target2.blockPos);
+            }
 
-                     if (!targetBlocks.isEmpty() && this.silentMine.hasDelayedDestroy()) {
-                        this.silentMine.silentBreakBlock((class_2338)targetBlocks.remove(), 10.0D);
-                     }
+            if (!targetBlocks.isEmpty()) {
+               this.silentMine.silentBreakBlock((class_2338)targetBlocks.remove(), class_2350.field_11036, 10.0D);
+               prioTarget = true;
+            }
+         }
 
-                     if (!targetBlocks.isEmpty() && (!this.silentMine.hasRebreakBlock() || this.silentMine.canRebreakRebreakBlock())) {
-                        this.silentMine.silentBreakBlock((class_2338)targetBlocks.remove(), 10.0D);
-                     }
+         if (!prioTarget) {
+            if (this.antiSwim.get() == AutoMine.AntiSwimMode.Always && shouldBreakSelfHeadBlock) {
+               this.silentMine.silentBreakBlock(this.mc.field_1724.method_24515().method_10084(), class_2350.field_11036, 10.0D);
+            }
 
-                  }
+            if (this.antiSwim.get() == AutoMine.AntiSwimMode.OnMineAndSwim && this.mc.field_1724.method_20448() && shouldBreakSelfHeadBlock) {
+               this.silentMine.silentBreakBlock(this.mc.field_1724.method_24515().method_10084(), class_2350.field_11036, 30.0D);
+            }
+
+            if (this.antiSwim.get() == AutoMine.AntiSwimMode.OnMine || this.antiSwim.get() == AutoMine.AntiSwimMode.OnMineAndSwim) {
+               BreakIndicators breakIndicators = (BreakIndicators)Modules.get().get(BreakIndicators.class);
+               if (breakIndicators.isBlockBeingBroken(this.mc.field_1724.method_24515()) && shouldBreakSelfHeadBlock) {
+                  this.silentMine.silentBreakBlock(this.mc.field_1724.method_24515().method_10084(), class_2350.field_11036, 20.0D);
+               }
+            }
+
+            boolean isTargetingFeetBlock = this.target1 != null && this.target1.isFeetBlock || this.target2 != null && this.target2.isFeetBlock;
+            if (isTargetingFeetBlock || (this.target1 == null || !this.target1.blockPos.equals(this.silentMine.getRebreakBlockPos())) && (this.target2 == null || !this.target2.blockPos.equals(this.silentMine.getRebreakBlockPos()))) {
+               boolean hasBothInProgress = this.silentMine.hasDelayedDestroy() && this.silentMine.hasRebreakBlock() && !this.silentMine.canRebreakRebreakBlock();
+               if (!hasBothInProgress) {
+                  ;
                }
             }
          }
@@ -354,6 +372,8 @@ public class AutoMine extends Module {
                if (score != -1000.0D) {
                   if (isPosGoodRebreak) {
                      score += 40.0D;
+                  } else {
+                     score -= this.getScorePenaltyForSync(pos.blockPos);
                   }
 
                   if (score > bestBlock.score) {
@@ -382,13 +402,14 @@ public class AutoMine extends Module {
 
       var6 = BlockUtils.iterate(feetBox).iterator();
 
+      class_2350 perpDir;
       while(var6.hasNext()) {
          pos = (class_2338)var6.next();
          Iterator var8 = class_2353.field_11062.iterator();
 
          while(var8.hasNext()) {
-            class_2350 dir = (class_2350)var8.next();
-            checkPos.add(new AutoMine.CheckPos(this, pos.method_10093(dir), AutoMine.CheckPosType.Surround));
+            perpDir = (class_2350)var8.next();
+            checkPos.add(new AutoMine.CheckPos(this, pos.method_10093(perpDir), AutoMine.CheckPosType.Surround));
          }
       }
 
@@ -399,10 +420,32 @@ public class AutoMine extends Module {
 
          while(var11.hasNext()) {
             class_2350 dir = (class_2350)var11.next();
-            checkPos.add(new AutoMine.CheckPos(this, this.targetPlayer.method_24515().method_10079(dir, 2), AutoMine.CheckPosType.Extend));
+            switch(((AutoMine.ExtendBreakMode)this.extendBreakMode.get()).ordinal()) {
+            case 0:
+            default:
+               break;
+            case 1:
+               checkPos.add(new AutoMine.CheckPos(this, this.targetPlayer.method_24515().method_10079(dir, 2), AutoMine.CheckPosType.Extend));
+               break;
+            case 2:
+               perpDir = this.getCornerPerpDir(dir);
+               checkPos.add(new AutoMine.CheckPos(this, this.targetPlayer.method_24515().method_10093(dir).method_10093(perpDir), AutoMine.CheckPosType.Extend));
+            }
          }
       }
 
+   }
+
+   private class_2350 getCornerPerpDir(class_2350 dir) {
+      if (dir == class_2350.field_11043) {
+         return class_2350.field_11034;
+      } else if (dir == class_2350.field_11035) {
+         return class_2350.field_11039;
+      } else if (dir == class_2350.field_11034) {
+         return class_2350.field_11043;
+      } else {
+         return dir == class_2350.field_11039 ? class_2350.field_11035 : null;
+      }
    }
 
    private void addBedrockCaseCheckPositions(Set<AutoMine.CheckPos> checkPos) {
@@ -451,10 +494,10 @@ public class AutoMine extends Module {
       class_2338 blockPos = pos.blockPos;
       double score = 0.0D;
       class_2680 block = this.mc.field_1687.method_8320(blockPos);
-      class_2680 selfHeadState;
+      class_2680 headBlock;
       if (blockPos.equals(this.targetPlayer.method_24515())) {
-         selfHeadState = this.mc.field_1687.method_8320(blockPos.method_10084());
-         if (selfHeadState.method_26204().equals(class_2246.field_10540)) {
+         headBlock = this.mc.field_1687.method_8320(blockPos.method_10084());
+         if (headBlock.method_26204().equals(class_2246.field_10540)) {
             score += 100.0D;
          } else {
             if (block.method_26204() == class_2246.field_10343) {
@@ -464,8 +507,8 @@ public class AutoMine extends Module {
             score += 50.0D;
          }
       } else {
-         selfHeadState = this.mc.field_1687.method_8320(this.mc.field_1724.method_24515().method_10084());
-         if (blockPos.equals(this.mc.field_1724.method_24515()) && (selfHeadState.method_26204().equals(class_2246.field_10540) || selfHeadState.method_26204().equals(class_2246.field_9987))) {
+         headBlock = this.mc.field_1687.method_8320(this.mc.field_1724.method_24515().method_10084());
+         if (blockPos.equals(this.mc.field_1724.method_24515()) && (headBlock.method_26204().equals(class_2246.field_10540) || headBlock.method_26204().equals(class_2246.field_9987))) {
             return -1000.0D;
          }
 
@@ -479,6 +522,13 @@ public class AutoMine extends Module {
                if (this.targetPlayer.method_24515().method_10093(dir).equals(blockPos)) {
                   class_2338 antiSurroundBlockPos = this.targetPlayer.method_24515().method_10079(dir, 2);
                   if (this.getBlockStateIgnore(antiSurroundBlockPos).method_26215() && this.isCrystalBlock(antiSurroundBlockPos.method_10074())) {
+                     isPosAntiSurround = true;
+                     break;
+                  }
+
+                  class_2350 perpDir = this.getCornerPerpDir(dir);
+                  class_2338 antiSurroundCornerBlockPos = this.targetPlayer.method_24515().method_10093(dir).method_10093(perpDir);
+                  if (this.getBlockStateIgnore(antiSurroundCornerBlockPos).method_26215() && this.isCrystalBlock(antiSurroundCornerBlockPos.method_10074())) {
                      isPosAntiSurround = true;
                      break;
                   }
@@ -575,6 +625,19 @@ public class AutoMine extends Module {
       }
    }
 
+   private double getScorePenaltyForSync(class_2338 blockPos) {
+      if (!(Boolean)this.breakIndicatorsSync.get()) {
+         return 0.0D;
+      } else {
+         BreakIndicators breakIndicators = (BreakIndicators)Modules.get().get(BreakIndicators.class);
+         if (breakIndicators.isBeingDoublemined(blockPos)) {
+            return (Boolean)this.breakIndicatorsSyncOnlyFriends.get() && !Friends.get().isFriend(breakIndicators.getPlayerDoubleminingBlock(blockPos)) ? 0.0D : (Double)this.breakIndicatorSyncPenalty.get();
+         } else {
+            return 0.0D;
+         }
+      }
+   }
+
    public boolean isTargetingAnything() {
       return this.target1 != null && this.target2 != null;
    }
@@ -662,6 +725,8 @@ public class AutoMine extends Module {
                               if (score != -1000.0D) {
                                  if (isPosGoodRebreak) {
                                     score += 40.0D;
+                                 } else {
+                                    score -= this.getScorePenaltyForSync(pos.blockPos);
                                  }
 
                                  double alpha = score / bestScore / 4.0D;
@@ -711,6 +776,8 @@ public class AutoMine extends Module {
                   if (score != -1000.0D) {
                      if (isPosGoodRebreak) {
                         score += 40.0D;
+                     } else {
+                        score -= this.getScorePenaltyForSync(pos.blockPos);
                      }
 
                      if (score > bestScore) {
@@ -794,6 +861,8 @@ public class AutoMine extends Module {
                   if (score != -1000.0D) {
                      if (isPosGoodRebreak) {
                         score += 40.0D;
+                     } else {
+                        score -= this.getScorePenaltyForSync(pos.blockPos);
                      }
 
                      vec3.set(blockPos.method_46558().field_1352, blockPos.method_46558().field_1351, blockPos.method_46558().field_1350);
@@ -823,6 +892,17 @@ public class AutoMine extends Module {
 
    public String getInfoString() {
       return this.targetPlayer == null ? null : String.format("%s", EntityUtils.getName(this.targetPlayer));
+   }
+
+   private static enum ExtendBreakMode {
+      None,
+      Long,
+      Corner;
+
+      // $FF: synthetic method
+      private static AutoMine.ExtendBreakMode[] $values() {
+         return new AutoMine.ExtendBreakMode[]{None, Long, Corner};
+      }
    }
 
    private static enum AntiSwimMode {
