@@ -91,7 +91,6 @@ public class MeteorClient implements ClientModInitializer {
          ReflectInit.init(PreInit.class);
          Categories.init();
          Systems.init();
-         ClientReporter.sendClientInfo();
          EVENT_BUS.subscribe((Object)this);
          AddonManager.ADDONS.forEach(MeteorAddon::onInitialize);
          Modules.get().sortModules();
