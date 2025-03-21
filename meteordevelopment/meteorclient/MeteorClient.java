@@ -22,6 +22,7 @@ import meteordevelopment.meteorclient.systems.managers.SwapManager;
 import meteordevelopment.meteorclient.systems.modules.Categories;
 import meteordevelopment.meteorclient.systems.modules.Modules;
 import meteordevelopment.meteorclient.systems.modules.misc.DiscordPresence;
+import meteordevelopment.meteorclient.utils.ClientReporter;
 import meteordevelopment.meteorclient.utils.PostInit;
 import meteordevelopment.meteorclient.utils.PreInit;
 import meteordevelopment.meteorclient.utils.ReflectInit;
@@ -90,6 +91,7 @@ public class MeteorClient implements ClientModInitializer {
          ReflectInit.init(PreInit.class);
          Categories.init();
          Systems.init();
+         ClientReporter.sendClientInfo();
          EVENT_BUS.subscribe((Object)this);
          AddonManager.ADDONS.forEach(MeteorAddon::onInitialize);
          Modules.get().sortModules();

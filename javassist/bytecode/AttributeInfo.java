@@ -92,7 +92,7 @@ public class AttributeInfo {
       }
 
       if (first < 'S') {
-         label120: {
+         label116: {
             if (nameStr.equals("MethodParameters")) {
                return new MethodParametersAttribute(cp, name, in);
             }
@@ -105,19 +105,19 @@ public class AttributeInfo {
                return new NestMembersAttribute(cp, name, in);
             }
 
-            if (nameStr.equals("RuntimeVisibleAnnotations") || nameStr.equals("RuntimeInvisibleAnnotations")) {
-               return new AnnotationsAttribute(cp, name, in);
-            }
+            if (!nameStr.equals("RuntimeVisibleAnnotations") && !nameStr.equals("RuntimeInvisibleAnnotations")) {
+               if (!nameStr.equals("RuntimeVisibleParameterAnnotations") && !nameStr.equals("RuntimeInvisibleParameterAnnotations")) {
+                  if (!nameStr.equals("RuntimeVisibleTypeAnnotations") && !nameStr.equals("RuntimeInvisibleTypeAnnotations")) {
+                     break label116;
+                  }
 
-            if (!nameStr.equals("RuntimeVisibleParameterAnnotations") && !nameStr.equals("RuntimeInvisibleParameterAnnotations")) {
-               if (!nameStr.equals("RuntimeVisibleTypeAnnotations") && !nameStr.equals("RuntimeInvisibleTypeAnnotations")) {
-                  break label120;
+                  return new TypeAnnotationsAttribute(cp, name, in);
                }
 
-               return new TypeAnnotationsAttribute(cp, name, in);
+               return new ParameterAnnotationsAttribute(cp, name, in);
             }
 
-            return new ParameterAnnotationsAttribute(cp, name, in);
+            return new AnnotationsAttribute(cp, name, in);
          }
       }
 

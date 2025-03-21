@@ -1155,7 +1155,7 @@ public class HighwayBuilder extends Module {
          Iterator var7 = it.iterator();
 
          while(true) {
-            label45: {
+            label42: {
                if (var7.hasNext()) {
                   MBlockPos pos = (MBlockPos)var7.next();
                   if (b.count >= (Integer)b.placementsPerTick.get()) {
@@ -1167,7 +1167,7 @@ public class HighwayBuilder extends Module {
                   }
 
                   if (!BlockUtils.place(pos.getBlockPos(), class_1268.field_5808, slot, ((HighwayBuilder.Rotation)b.rotation.get()).place, 0, true, true, true)) {
-                     break label45;
+                     break label42;
                   }
 
                   placed = true;
@@ -1175,7 +1175,7 @@ public class HighwayBuilder extends Module {
                   b.placeTimer = (Integer)b.placeDelay.get();
                   ++b.count;
                   if ((Integer)b.placementsPerTick.get() != 1) {
-                     break label45;
+                     break label42;
                   }
                }
 

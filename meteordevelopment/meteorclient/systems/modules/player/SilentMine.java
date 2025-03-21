@@ -45,6 +45,7 @@ public class SilentMine extends Module {
    public final Setting<Boolean> preSwitchSinglebreak;
    private final Setting<Integer> singleBreakFailTicks;
    public final Setting<Boolean> rebreakSetBlockBroken;
+   private final Setting<Double> speedPercentage;
    private final Setting<Boolean> render;
    private final Setting<Boolean> renderBlock;
    private final Setting<ShapeMode> shapeMode;
@@ -64,25 +65,26 @@ public class SilentMine extends Module {
       super(Categories.Player, "silent-mine", "Allows you to mine blocks without holding a pickaxe");
       this.sgGeneral = this.settings.getDefaultGroup();
       this.sgRender = this.settings.createGroup("Render");
-      this.range = this.sgGeneral.add(((DoubleSetting.Builder)((DoubleSetting.Builder)(new DoubleSetting.Builder()).name("range")).description("Range to activate use at")).defaultValue(5.14D).min(0.0D).sliderMax(7.0D).build());
-      this.antiRubberband = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("strict-anti-rubberband")).description("Attempts to prevent you from rubberbanding extra hard. May result in kicks.")).defaultValue(true)).build());
-      this.preSwitchSinglebreak = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("pre-switch-single-break")).description("Pre-switches to your pickaxe when the singlebreak block is almost done, for more responsive breaking.")).defaultValue(true)).build());
-      this.singleBreakFailTicks = this.sgGeneral.add(((IntSetting.Builder)((IntSetting.Builder)((IntSetting.Builder)(new IntSetting.Builder()).name("single-break-fail-ticks")).description("Number of ticks to wait before retrying a singlebreak in case of fail.")).defaultValue(20)).min(5).sliderMax(50).build());
-      this.rebreakSetBlockBroken = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("set-rebreak-block-broken")).description("Breaks the rebreak client side instantly.")).defaultValue(true)).build());
-      this.render = this.sgRender.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("do-render")).description("Renders the blocks in queue to be broken.")).defaultValue(true)).build());
-      this.renderBlock = this.sgRender.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("render-block")).description("Whether to render the block being broken.")).defaultValue(true)).build());
+      this.range = this.sgGeneral.add(((DoubleSetting.Builder)(new DoubleSetting.Builder()).name("range")).defaultValue(5.14D).min(0.0D).sliderMax(7.0D).build());
+      this.antiRubberband = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("strict-anti-rubberband")).defaultValue(true)).build());
+      this.preSwitchSinglebreak = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("pre-switch-single-break")).defaultValue(true)).build());
+      this.singleBreakFailTicks = this.sgGeneral.add(((IntSetting.Builder)((IntSetting.Builder)(new IntSetting.Builder()).name("single-break-fail-ticks")).defaultValue(20)).min(5).sliderMax(50).build());
+      this.rebreakSetBlockBroken = this.sgGeneral.add(((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("set-rebreak-block-broken")).defaultValue(true)).build());
+      this.speedPercentage = this.sgGeneral.add(((DoubleSetting.Builder)((DoubleSetting.Builder)(new DoubleSetting.Builder()).name("speed-percentage")).description("Percentage of vanilla mining speed (100% = vanilla, 70% = 70% of vanilla time).")).defaultValue(100.0D).min(0.0D).sliderMax(100.0D).build());
+      this.render = this.sgRender.add(((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("do-render")).defaultValue(true)).build());
+      this.renderBlock = this.sgRender.add(((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("render-block")).defaultValue(true)).build());
       SettingGroup var10001 = this.sgRender;
-      EnumSetting.Builder var10002 = (EnumSetting.Builder)((EnumSetting.Builder)((EnumSetting.Builder)(new EnumSetting.Builder()).name("shape-mode")).description("How the shapes are rendered.")).defaultValue(ShapeMode.Both);
+      EnumSetting.Builder var10002 = (EnumSetting.Builder)((EnumSetting.Builder)(new EnumSetting.Builder()).name("shape-mode")).defaultValue(ShapeMode.Both);
       Setting var10003 = this.renderBlock;
       Objects.requireNonNull(var10003);
       this.shapeMode = var10001.add(((EnumSetting.Builder)var10002.visible(var10003::get)).build());
-      this.sideColor = this.sgRender.add(((ColorSetting.Builder)((ColorSetting.Builder)((ColorSetting.Builder)(new ColorSetting.Builder()).name("side-color")).description("The side color of the rendering.")).defaultValue(new SettingColor(255, 180, 255, 15)).visible(() -> {
+      this.sideColor = this.sgRender.add(((ColorSetting.Builder)((ColorSetting.Builder)(new ColorSetting.Builder()).name("side-color")).defaultValue(new SettingColor(255, 180, 255, 15)).visible(() -> {
          return (Boolean)this.renderBlock.get() && ((ShapeMode)this.shapeMode.get()).sides();
       })).build());
-      this.lineColor = this.sgRender.add(((ColorSetting.Builder)((ColorSetting.Builder)((ColorSetting.Builder)(new ColorSetting.Builder()).name("line-color")).description("The line color of the rendering.")).defaultValue(new SettingColor(255, 255, 255, 60)).visible(() -> {
+      this.lineColor = this.sgRender.add(((ColorSetting.Builder)((ColorSetting.Builder)(new ColorSetting.Builder()).name("line-color")).defaultValue(new SettingColor(255, 255, 255, 60)).visible(() -> {
          return (Boolean)this.renderBlock.get() && ((ShapeMode)this.shapeMode.get()).lines();
       })).build());
-      this.debugRenderPrimary = this.sgRender.add(((BoolSetting.Builder)((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("debug-render-primary")).description("Render the primary block differently for debugging.")).defaultValue(false)).build());
+      this.debugRenderPrimary = this.sgRender.add(((BoolSetting.Builder)((BoolSetting.Builder)(new BoolSetting.Builder()).name("debug-render-primary")).defaultValue(false)).build());
       this.rebreakBlock = null;
       this.delayedDestroyBlock = null;
       this.lastDelayedDestroyBlockPos = null;
@@ -189,38 +191,32 @@ public class SilentMine extends Module {
    }
 
    public void silentBreakBlock(class_2338 blockPos, class_2350 direction, double priority) {
-      if (this.isActive()) {
-         if (blockPos != null && !this.alreadyBreaking(blockPos)) {
-            if (BlockUtils.canBreak(blockPos, this.mc.field_1687.method_8320(blockPos))) {
-               if (this.inBreakRange(blockPos)) {
-                  boolean isAntiSwimBlock = blockPos.equals(this.mc.field_1724.method_24515().method_10084());
-                  if (!this.hasDelayedDestroy()) {
-                     boolean willResetPrimary = this.rebreakBlock != null && !this.canRebreakRebreakBlock();
-                     if (willResetPrimary && this.rebreakBlock.priority < priority) {
-                        return;
-                     }
-
-                     this.currentGameTickCalculated -= 0.1D;
-                     this.delayedDestroyBlock = new SilentMine.SilentMineBlock(blockPos, direction, priority, false);
-                     this.delayedDestroyBlock.startBreaking(true);
-                     if (willResetPrimary) {
-                        this.rebreakBlock.startBreaking(false);
-                     }
-                  }
-
-                  if (!this.alreadyBreaking(blockPos)) {
-                     if (this.rebreakBlock != null && this.delayedDestroyBlock != null && (priority >= this.rebreakBlock.priority || this.canRebreakRebreakBlock()) && this.delayedDestroyBlock.getBreakProgress() <= 0.8D) {
-                        this.rebreakBlock = null;
-                     }
-
-                     if (this.rebreakBlock == null || isAntiSwimBlock) {
-                        this.rebreakBlock = new SilentMine.SilentMineBlock(blockPos, direction, priority, true);
-                        this.rebreakBlock.startBreaking(false);
-                     }
-
-                  }
-               }
+      if (this.isActive() && blockPos != null && !this.alreadyBreaking(blockPos) && BlockUtils.canBreak(blockPos, this.mc.field_1687.method_8320(blockPos)) && this.inBreakRange(blockPos)) {
+         boolean isAntiSwimBlock = blockPos.equals(this.mc.field_1724.method_24515().method_10084());
+         if (!this.hasDelayedDestroy()) {
+            boolean willResetPrimary = this.rebreakBlock != null && !this.canRebreakRebreakBlock();
+            if (willResetPrimary && this.rebreakBlock.priority < priority) {
+               return;
             }
+
+            this.currentGameTickCalculated -= 0.1D;
+            this.delayedDestroyBlock = new SilentMine.SilentMineBlock(blockPos, direction, priority, false);
+            this.delayedDestroyBlock.startBreaking(true);
+            if (willResetPrimary) {
+               this.rebreakBlock.startBreaking(false);
+            }
+         }
+
+         if (!this.alreadyBreaking(blockPos)) {
+            if (this.rebreakBlock != null && this.delayedDestroyBlock != null && (priority >= this.rebreakBlock.priority || this.canRebreakRebreakBlock()) && this.delayedDestroyBlock.getBreakProgress() <= 0.8D) {
+               this.rebreakBlock = null;
+            }
+
+            if (this.rebreakBlock == null || isAntiSwimBlock) {
+               this.rebreakBlock = new SilentMine.SilentMineBlock(blockPos, direction, priority, true);
+               this.rebreakBlock.startBreaking(false);
+            }
+
          }
       }
    }
@@ -232,12 +228,7 @@ public class SilentMine extends Module {
    }
 
    public boolean canSwapBack() {
-      boolean result = this.needDelayedDestroySwapBack;
-      if (this.hasDelayedDestroy() && this.delayedDestroyBlock.isReady()) {
-         result = false;
-      }
-
-      return result;
+      return this.needDelayedDestroySwapBack && (!this.hasDelayedDestroy() || !this.delayedDestroyBlock.isReady());
    }
 
    public boolean hasDelayedDestroy() {
@@ -249,7 +240,7 @@ public class SilentMine extends Module {
    }
 
    public class_2338 getDelayedDestroyBlockPos() {
-      return this.delayedDestroyBlock == null ? null : this.delayedDestroyBlock.blockPos;
+      return this.delayedDestroyBlock != null ? this.delayedDestroyBlock.blockPos : null;
    }
 
    public void cancelBreaking() {
@@ -270,23 +261,23 @@ public class SilentMine extends Module {
    }
 
    public double getDelayedDestroyProgress() {
-      return this.delayedDestroyBlock == null ? 0.0D : this.delayedDestroyBlock.getBreakProgress();
+      return this.delayedDestroyBlock != null ? this.delayedDestroyBlock.getBreakProgress() : 0.0D;
    }
 
    public class_2338 getRebreakBlockPos() {
-      return this.rebreakBlock == null ? null : this.rebreakBlock.blockPos;
+      return this.rebreakBlock != null ? this.rebreakBlock.blockPos : null;
    }
 
    public double getRebreakBlockProgress() {
-      return this.rebreakBlock == null ? 0.0D : this.rebreakBlock.getBreakProgress();
+      return this.rebreakBlock != null ? this.rebreakBlock.getBreakProgress() : 0.0D;
    }
 
    public boolean canRebreakRebreakBlock() {
-      return this.rebreakBlock == null ? false : this.rebreakBlock.beenAir;
+      return this.rebreakBlock != null && this.rebreakBlock.beenAir;
    }
 
    public boolean inBreakRange(class_2338 blockPos) {
-      return !((new class_238(blockPos)).method_49271(this.mc.field_1724.method_33571()) > (Double)this.range.get() * (Double)this.range.get());
+      return (new class_238(blockPos)).method_49271(this.mc.field_1724.method_33571()) <= (Double)this.range.get() * (Double)this.range.get();
    }
 
    public boolean alreadyBreaking(class_2338 blockPos) {
@@ -347,7 +338,9 @@ public class SilentMine extends Module {
             return false;
          } else {
             double breakProgressSingleTick = this.getBreakProgressSingleTick();
-            double threshold = this.isRebreak ? 0.7D : 1.0D - ((Boolean)SilentMine.this.preSwitchSinglebreak.get() ? breakProgressSingleTick / 2.0D : 0.0D);
+            double speedMultiplier = (Double)SilentMine.this.speedPercentage.get() / 100.0D;
+            double baseThreshold = this.isRebreak ? 0.7D : 1.0D;
+            double threshold = baseThreshold - ((Boolean)SilentMine.this.preSwitchSinglebreak.get() && !this.isRebreak ? breakProgressSingleTick / speedMultiplier / 2.0D : 0.0D);
             return this.getBreakProgress() >= threshold || this.timesSendBreakPacket > 0;
          }
       }
@@ -393,7 +386,7 @@ public class SilentMine extends Module {
 
       public double getBreakProgress(double gameTick) {
          class_2680 state = SilentMine.this.mc.field_1687.method_8320(this.blockPos);
-         FindItemResult slot = InvUtils.findFastestToolHotbar(SilentMine.this.mc.field_1687.method_8320(this.blockPos));
+         FindItemResult slot = InvUtils.findFastestToolHotbar(state);
          class_238 boundingBox = SilentMine.this.mc.field_1724.method_5829();
          double playerFeetY = boundingBox.field_1322;
          class_238 groundBox = new class_238(boundingBox.field_1323, playerFeetY - 0.2D, boundingBox.field_1321, boundingBox.field_1320, playerFeetY, boundingBox.field_1324);
@@ -412,8 +405,10 @@ public class SilentMine extends Module {
             }
          }
 
-         double breakingSpeed = BlockUtils.getBlockBreakingSpeed(slot.found() ? slot.slot() : SilentMine.this.mc.field_1724.method_31548().field_7545, state, RotationManager.lastGround || willBeOnGround && !this.isRebreak);
-         return Math.min(BlockUtils.getBreakDelta(breakingSpeed, state) * (gameTick - this.destroyProgressStart), 1.0D);
+         double baseBreakingSpeed = BlockUtils.getBlockBreakingSpeed(slot.found() ? slot.slot() : SilentMine.this.mc.field_1724.method_31548().field_7545, state, RotationManager.lastGround || willBeOnGround && !this.isRebreak) * 1.25D;
+         double speedMultiplier = (Double)SilentMine.this.speedPercentage.get() / 100.0D;
+         double adjustedBreakingSpeed = baseBreakingSpeed / speedMultiplier;
+         return Math.min(BlockUtils.getBreakDelta(adjustedBreakingSpeed, state) * (gameTick - this.destroyProgressStart), 1.0D);
       }
 
       public double getBreakProgressSingleTick() {
